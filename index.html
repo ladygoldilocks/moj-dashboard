@@ -372,7 +372,7 @@
                 </div>
                 <div class="form-group">
                     <label for="epicTime">Czas realizacji (dni) *</label>
-                    <input type="number" id="epicTime" min="1" step="0.1" placeholder="np. 45" required>
+                    <input type="number" id="epicTime" min="0.1" step="0.1" placeholder="np. 45" required>
                     <div class="error-message" id="timeError">Wprowadź czas realizacji (liczba większa od 0)</div>
                 </div>
                 <div class="form-buttons">
@@ -605,7 +605,7 @@
             const labels = [];
             for (let i = 0; i < numBins; i++) {
                 const start = i * binSize;
-                const end = (i + 1) * binSize - 1;
+                const end = (i + 1) * binSize;
                 labels.push(`${start}-${end}`);
             }
             
@@ -639,23 +639,30 @@
             
             // Add statistical lines based on checkbox state
             const maxBinValue = Math.max(...bins.S, ...bins.M, ...bins.L);
+            const STAT_LINE_HEIGHT_MULTIPLIER = 1.1; // Height multiplier for statistical lines
             
             // Helper function to create statistical line dataset
             function createStatLine(value, label, color, dashPattern) {
                 const bin = Math.floor(value / binSize);
                 const lineData = Array(numBins).fill(null);
-                const height = Math.max(maxBinValue * 1.1, 1); // Ensure minimum height of 1
+                const height = Math.max(maxBinValue * STAT_LINE_HEIGHT_MULTIPLIER, 1); // Ensure minimum height of 1
                 
                 if (bin < numBins) {
                     lineData[bin] = height;
                 }
+                
+                // Extract RGBA components and create background color with lower opacity
+                const rgbaMatch = color.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*([\d.]+))?\)/);
+                const backgroundColor = rgbaMatch 
+                    ? `rgba(${rgbaMatch[1]}, ${rgbaMatch[2]}, ${rgbaMatch[3]}, 0.1)`
+                    : color;
                 
                 return {
                     label: label,
                     data: lineData,
                     type: 'line',
                     borderColor: color,
-                    backgroundColor: color.replace('1)', '0.1)'),
+                    backgroundColor: backgroundColor,
                     borderWidth: 3,
                     borderDash: dashPattern,
                     pointRadius: 6,
