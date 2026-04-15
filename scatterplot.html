@@ -187,7 +187,7 @@
         // Load CSV data
         async function loadCSV() {
             try {
-                const response = await fetch('2. Scatterplot czasów realizacji.csv');
+                const response = await fetch(encodeURI('2. Scatterplot czasów realizacji.csv'));
                 if (!response.ok) {
                     throw new Error('Nie można załadować pliku CSV');
                 }
@@ -212,7 +212,19 @@
                                 const day = parseInt(dateParts[0]);
                                 const month = parseInt(dateParts[1]) - 1; // JS months are 0-indexed
                                 const year = parseInt(dateParts[2]);
+                                
+                                // Validate date components
+                                if (isNaN(day) || isNaN(month) || isNaN(year) || 
+                                    day < 1 || day > 31 || month < 0 || month > 11 || year < 1900) {
+                                    continue;
+                                }
+                                
                                 const date = new Date(year, month, day);
+                                
+                                // Verify the date wasn't silently adjusted
+                                if (date.getDate() !== day || date.getMonth() !== month || date.getFullYear() !== year) {
+                                    continue;
+                                }
                                 
                                 data.push({ 
                                     date: date,
@@ -248,7 +260,12 @@
                 sumX2 += p.x * p.x;
             });
             
-            const slope = (n * sumXY - sumX * sumY) / (n * sumX2 - sumX * sumX);
+            const denominator = n * sumX2 - sumX * sumX;
+            
+            // Prevent division by zero when all x values are identical
+            if (denominator === 0) return null;
+            
+            const slope = (n * sumXY - sumX * sumY) / denominator;
             const intercept = (sumY - slope * sumX) / n;
             
             return { slope, intercept };
