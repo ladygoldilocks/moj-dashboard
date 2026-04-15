@@ -188,7 +188,7 @@
         async function loadCSV() {
             try {
                 const fileName = '2. Scatterplot czasów realizacji.csv';
-                const response = await fetch(fileName.split('/').map(encodeURIComponent).join('/'));
+                const response = await fetch(encodeURIComponent(fileName));
                 if (!response.ok) {
                     throw new Error('Nie można załadować pliku CSV');
                 }
@@ -217,7 +217,7 @@
                                 
                                 // Validate basic date components
                                 if (isNaN(day) || isNaN(month) || isNaN(year) || 
-                                    day < 1 || month < 0 || month > 11 || year < 1900) {
+                                    day < 1 || day > 31 || month < 0 || month > 11 || year < 1900) {
                                     continue;
                                 }
                                 
@@ -326,7 +326,9 @@
                         borderWidth: 2,
                         pointRadius: 6,
                         pointHoverRadius: 8,
-                        type: 'scatter'
+                        type: 'scatter',
+                        size: size, // Store size as metadata for robust access
+                        sizeData: sizeData // Store full data for tooltip access
                     });
 
                     // Add trend line if enabled
@@ -424,9 +426,10 @@
                                         return `Linia trendu: ${context.parsed.y.toFixed(1)} dni`;
                                     }
                                     
-                                    // Find the original data point
-                                    const size = context.dataset.label.replace('Rozmiar ', '');
-                                    const sizeData = dataBySizeMap[size];
+                                    // Access size from dataset metadata
+                                    const size = context.dataset.size;
+                                    const sizeData = context.dataset.sizeData;
+                                    
                                     if (sizeData && sizeData[dataIndex]) {
                                         const point = sizeData[dataIndex];
                                         return [
