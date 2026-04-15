@@ -207,9 +207,8 @@
 
         // Load CSV data
         async function loadCSV() {
-            const fileName = CSV_FILENAME;
             try {
-                const response = await fetch(fileName);
+                const response = await fetch(CSV_FILENAME);
                 if (!response.ok) {
                     throw new Error('Nie można załadować pliku CSV');
                 }
@@ -233,7 +232,7 @@
                             const dateParts = dateStr.split('.');
                             if (dateParts.length === 3) {
                                 const day = parseInt(dateParts[0]);
-                                const month = parseInt(dateParts[1]) - 1; // Convert from 1-12 (CSV) to 0-11 (JavaScript months)
+                                const month = parseInt(dateParts[1]) - 1; // JavaScript months are 0-indexed (0=January, 11=December), so subtract 1 from CSV month (1-12)
                                 const year = parseInt(dateParts[2]);
                                 
                                 // Validate basic date components
@@ -265,7 +264,7 @@
                 return data;
             } catch (error) {
                 console.error('Błąd podczas wczytywania danych:', error);
-                alert(`Nie można załadować pliku danych CSV. Upewnij się, że plik "${fileName}" znajduje się w tym samym katalogu co scatterplot.html.`);
+                alert(`Nie można załadować pliku danych CSV. Upewnij się, że plik "${CSV_FILENAME}" znajduje się w tym samym katalogu co scatterplot.html.`);
                 throw error;
             }
         }
@@ -348,7 +347,7 @@
                         pointRadius: 6,
                         pointHoverRadius: 8,
                         type: 'scatter',
-                        size: size, // Store size metadata (Chart.js tooltips only provide dataset/index, not original data)
+                        size: size, // Store size for tooltip access (Chart.js provides dataset/index only)
                         sizeData: sizeData // Store full data for tooltip access to original properties
                     });
 
