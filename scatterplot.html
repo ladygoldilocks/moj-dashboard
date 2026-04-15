@@ -95,6 +95,15 @@
             color: #333;
             margin-top: 5px;
         }
+        .error-message {
+            color: red;
+            text-align: center;
+            margin-top: 20px;
+            padding: 20px;
+            background-color: #ffebee;
+            border-radius: 5px;
+            border-left: 4px solid #f44336;
+        }
     </style>
 </head>
 <body>
@@ -244,7 +253,7 @@
                 return data;
             } catch (error) {
                 console.error('Błąd podczas wczytywania danych:', error);
-                alert('Nie można załadować pliku danych CSV. Upewnij się, że plik "2. Scatterplot czasów realizacji.csv" znajduje się w tym samym katalogu co scatterplot.html.');
+                alert(`Nie można załadować pliku danych CSV. Upewnij się, że plik "${fileName}" znajduje się w tym samym katalogu co scatterplot.html.`);
                 throw error;
             }
         }
@@ -455,7 +464,7 @@
             } catch (error) {
                 console.error('Błąd podczas inicjalizacji:', error);
                 document.querySelector('.container').innerHTML += 
-                    '<div style="color: red; text-align: center; margin-top: 20px;">Wystąpił błąd podczas ładowania danych. Sprawdź konsolę przeglądarki, aby uzyskać więcej informacji.</div>';
+                    '<div class="error-message">Wystąpił błąd podczas ładowania danych. Sprawdź konsolę przeglądarki, aby uzyskać więcej informacji.</div>';
             }
         }
 
