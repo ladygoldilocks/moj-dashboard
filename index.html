@@ -115,9 +115,13 @@
     <script>
         // Funkcja do wczytania i parsowania CSV
         async function loadCSV() {
-            const response = await fetch('1 Histogram czasów realizacji.csv');
-            const text = await response.text();
-            const lines = text.trim().split('\n');
+            try {
+                const response = await fetch('1 Histogram czasów realizacji.csv');
+                if (!response.ok) {
+                    throw new Error(`Nie można załadować pliku CSV: ${response.status}`);
+                }
+                const text = await response.text();
+                const lines = text.trim().split('\n');
             
             const data = [];
             for (let i = 1; i < lines.length; i++) {
@@ -127,14 +131,19 @@
                 const parts = line.split(';');
                 if (parts.length >= 2) {
                     const size = parts[0].trim();
-                    const time = parseInt(parts[1].trim());
+                    const time = parseFloat(parts[1].trim());
                     if (!isNaN(time)) {
                         data.push({ size, time });
                     }
                 }
             }
             
-            return data;
+                return data;
+            } catch (error) {
+                console.error('Błąd podczas wczytywania danych:', error);
+                alert('Nie można załadować pliku danych CSV. Upewnij się, że plik "1 Histogram czasów realizacji.csv" znajduje się w tym samym katalogu co index.html.');
+                throw error;
+            }
         }
 
         // Funkcja do obliczenia percentyla
@@ -154,7 +163,8 @@
 
         // Funkcja do tworzenia histogramu
         async function createHistogram() {
-            const data = await loadCSV();
+            try {
+                const data = await loadCSV();
             
             // Oblicz statystyki
             const times = data.map(d => d.time);
@@ -268,65 +278,27 @@
                             display: true,
                             position: 'top'
                         },
-                        annotation: {
-                            annotations: {
-                                mean: {
-                                    type: 'line',
-                                    xMin: mean / binSize,
-                                    xMax: mean / binSize,
-                                    borderColor: 'red',
-                                    borderWidth: 2,
-                                    borderDash: [5, 5],
-                                    label: {
-                                        display: true,
-                                        content: `Średnia: ${mean.toFixed(1)}`,
-                                        position: 'start'
-                                    }
-                                },
-                                p50: {
-                                    type: 'line',
-                                    xMin: p50 / binSize,
-                                    xMax: p50 / binSize,
-                                    borderColor: 'blue',
-                                    borderWidth: 2,
-                                    borderDash: [5, 5],
-                                    label: {
-                                        display: true,
-                                        content: `P50: ${p50.toFixed(1)}`,
-                                        position: 'start'
-                                    }
-                                },
-                                p85: {
-                                    type: 'line',
-                                    xMin: p85 / binSize,
-                                    xMax: p85 / binSize,
-                                    borderColor: 'orange',
-                                    borderWidth: 2,
-                                    borderDash: [5, 5],
-                                    label: {
-                                        display: true,
-                                        content: `P85: ${p85.toFixed(1)}`,
-                                        position: 'start'
-                                    }
-                                },
-                                p95: {
-                                    type: 'line',
-                                    xMin: p95 / binSize,
-                                    xMax: p95 / binSize,
-                                    borderColor: 'purple',
-                                    borderWidth: 2,
-                                    borderDash: [5, 5],
-                                    label: {
-                                        display: true,
-                                        content: `P95: ${p95.toFixed(1)}`,
-                                        position: 'start'
-                                    }
+                        tooltip: {
+                            callbacks: {
+                                footer: function(tooltipItems) {
+                                    const binStart = parseInt(tooltipItems[0].label.split('-')[0]);
+                                    const binEnd = binStart + binSize;
+                                    let footer = `\nStatystyki:`;
+                                    if (mean >= binStart && mean < binEnd) footer += `\n• Średnia: ${mean.toFixed(1)}`;
+                                    if (p50 >= binStart && p50 < binEnd) footer += `\n• P50: ${p50.toFixed(1)}`;
+                                    if (p85 >= binStart && p85 < binEnd) footer += `\n• P85: ${p85.toFixed(1)}`;
+                                    if (p95 >= binStart && p95 < binEnd) footer += `\n• P95: ${p95.toFixed(1)}`;
+                                    return footer;
                                 }
                             }
                         }
                     }
                 }
-            });
+            } catch (error) {
+                console.error('Błąd podczas tworzenia histogramu:', error);
+                document.querySelector('.container').innerHTML += 
+                    '<div style="color: red; text-align: center; margin-top: 20px;">Wystąpił błąd podczas ładowania danych. Sprawdź konsolę przeglądarki, aby uzyskać więcej informacji.</div>';
+            }
         }
 
         // Uruchom po załadowaniu strony
