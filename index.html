@@ -373,7 +373,7 @@
                 <div class="form-group">
                     <label for="epicTime">Czas realizacji (dni) *</label>
                     <input type="number" id="epicTime" min="0.1" step="0.1" placeholder="np. 45" required>
-                    <div class="error-message" id="timeError">Wprowadź czas realizacji (liczba większa od 0)</div>
+                    <div class="error-message" id="timeError">Wprowadź czas realizacji (minimum 0.1 dnia)</div>
                 </div>
                 <div class="form-buttons">
                     <button type="button" class="cancel-button" onclick="closeModal()">Anuluj</button>
@@ -429,7 +429,7 @@
                 isValid = false;
             }
             
-            if (!time || time <= 0) {
+            if (!time || time < 0.1) {
                 document.getElementById('timeError').style.display = 'block';
                 isValid = false;
             }
