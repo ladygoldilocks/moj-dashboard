@@ -72,6 +72,15 @@
             height: 20px;
             border-radius: 50%;
         }
+        .legend-color-s {
+            background-color: #4CAF50;
+        }
+        .legend-color-m {
+            background-color: #FFC107;
+        }
+        .legend-color-l {
+            background-color: #F44336;
+        }
         .stats {
             margin-top: 30px;
             display: grid;
@@ -133,15 +142,15 @@
         
         <div class="legend">
             <div class="legend-item">
-                <div class="legend-color" style="background-color: #4CAF50;"></div>
+                <div class="legend-color legend-color-s"></div>
                 <span>Rozmiar S (Small) - Zielony</span>
             </div>
             <div class="legend-item">
-                <div class="legend-color" style="background-color: #FFC107;"></div>
+                <div class="legend-color legend-color-m"></div>
                 <span>Rozmiar M (Medium) - Żółty</span>
             </div>
             <div class="legend-item">
-                <div class="legend-color" style="background-color: #F44336;"></div>
+                <div class="legend-color legend-color-l"></div>
                 <span>Rozmiar L (Large) - Czerwony</span>
             </div>
         </div>
@@ -171,6 +180,9 @@
     </div>
 
     <script>
+        // Configuration constants
+        const CSV_FILENAME = '2. Scatterplot czasów realizacji.csv';
+        
         let chart = null;
         let allData = [];
 
@@ -195,7 +207,7 @@
 
         // Load CSV data
         async function loadCSV() {
-            const fileName = '2. Scatterplot czasów realizacji.csv';
+            const fileName = CSV_FILENAME;
             try {
                 const response = await fetch(fileName);
                 if (!response.ok) {
