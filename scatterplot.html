@@ -187,7 +187,8 @@
         // Load CSV data
         async function loadCSV() {
             try {
-                const response = await fetch(encodeURI('2. Scatterplot czasów realizacji.csv'));
+                const fileName = '2. Scatterplot czasów realizacji.csv';
+                const response = await fetch(fileName.split('/').map(encodeURIComponent).join('/'));
                 if (!response.ok) {
                     throw new Error('Nie można załadować pliku CSV');
                 }
@@ -195,6 +196,7 @@
                 const lines = text.trim().split('\n');
                 
                 const data = [];
+                let sequentialIndex = 0; // Counter for valid data points
                 for (let i = 1; i < lines.length; i++) {
                     const line = lines[i].trim();
                     if (!line) continue;
@@ -213,15 +215,15 @@
                                 const month = parseInt(dateParts[1]) - 1; // JS months are 0-indexed
                                 const year = parseInt(dateParts[2]);
                                 
-                                // Validate date components
+                                // Validate basic date components
                                 if (isNaN(day) || isNaN(month) || isNaN(year) || 
-                                    day < 1 || day > 31 || month < 0 || month > 11 || year < 1900) {
+                                    day < 1 || month < 0 || month > 11 || year < 1900) {
                                     continue;
                                 }
                                 
                                 const date = new Date(year, month, day);
                                 
-                                // Verify the date wasn't silently adjusted
+                                // Verify the date wasn't silently adjusted (catches invalid days for the month)
                                 if (date.getDate() !== day || date.getMonth() !== month || date.getFullYear() !== year) {
                                     continue;
                                 }
@@ -231,8 +233,9 @@
                                     dateStr: dateStr,
                                     size: size,
                                     time: time,
-                                    x: i - 1 // Sequential index for x-axis
+                                    x: sequentialIndex // Sequential index for x-axis
                                 });
+                                sequentialIndex++; // Increment only for valid data points
                             }
                         }
                     }
