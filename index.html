@@ -1,1 +1,309 @@
-test
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Histogram Czasów Realizacji</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background-color: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+        }
+        .chart-container {
+            position: relative;
+            height: 500px;
+            margin-top: 30px;
+        }
+        .stats {
+            margin-top: 30px;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+        }
+        .stat-card {
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            border-left: 4px solid #007bff;
+        }
+        .stat-label {
+            font-size: 12px;
+            color: #666;
+            text-transform: uppercase;
+        }
+        .stat-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #333;
+            margin-top: 5px;
+        }
+        .legend {
+            margin-top: 20px;
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+        }
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .legend-color {
+            width: 20px;
+            height: 20px;
+            border-radius: 3px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Histogram Czasów Realizacji</h1>
+        
+        <div class="legend">
+            <div class="legend-item">
+                <div class="legend-color" style="background-color: #4CAF50;"></div>
+                <span>Rozmiar S (Small)</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background-color: #2196F3;"></div>
+                <span>Rozmiar M (Medium)</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background-color: #FF9800;"></div>
+                <span>Rozmiar L (Large)</span>
+            </div>
+        </div>
+
+        <div class="chart-container">
+            <canvas id="histogramChart"></canvas>
+        </div>
+
+        <div class="stats">
+            <div class="stat-card">
+                <div class="stat-label">Średnia (Mean)</div>
+                <div class="stat-value" id="mean">-</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">50. Percentyl (Mediana)</div>
+                <div class="stat-value" id="p50">-</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">85. Percentyl</div>
+                <div class="stat-value" id="p85">-</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">95. Percentyl</div>
+                <div class="stat-value" id="p95">-</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Funkcja do wczytania i parsowania CSV
+        async function loadCSV() {
+            try {
+                const response = await fetch('1 Histogram czasów realizacji.csv');
+                if (!response.ok) {
+                    throw new Error(`Nie można załadować pliku CSV: ${response.status}`);
+                }
+                const text = await response.text();
+                const lines = text.trim().split('\n');
+                
+                const data = [];
+                for (let i = 1; i < lines.length; i++) {
+                    const line = lines[i].trim();
+                    if (!line) continue;
+                    
+                    const parts = line.split(';');
+                    if (parts.length >= 2) {
+                        const size = parts[0].trim();
+                        const time = parseFloat(parts[1].trim());
+                        if (!isNaN(time)) {
+                            data.push({ size, time });
+                        }
+                    }
+                }
+                
+                return data;
+            } catch (error) {
+                console.error('Błąd podczas wczytywania danych:', error);
+                alert('Nie można załadować pliku danych CSV. Upewnij się, że plik "1 Histogram czasów realizacji.csv" znajduje się w tym samym katalogu co index.html.');
+                throw error;
+            }
+        }
+
+        // Funkcja do obliczenia percentyla
+        function calculatePercentile(values, percentile) {
+            const sorted = [...values].sort((a, b) => a - b);
+            const index = (percentile / 100) * (sorted.length - 1);
+            const lower = Math.floor(index);
+            const upper = Math.ceil(index);
+            const weight = index - lower;
+            
+            if (lower === upper) {
+                return sorted[lower];
+            }
+            
+            return sorted[lower] * (1 - weight) + sorted[upper] * weight;
+        }
+
+        // Funkcja do tworzenia histogramu
+        async function createHistogram() {
+            try {
+                const data = await loadCSV();
+                
+                // Oblicz statystyki
+                const times = data.map(d => d.time);
+                const mean = times.reduce((a, b) => a + b, 0) / times.length;
+                const p50 = calculatePercentile(times, 50);
+                const p85 = calculatePercentile(times, 85);
+                const p95 = calculatePercentile(times, 95);
+                
+                // Wyświetl statystyki
+                document.getElementById('mean').textContent = mean.toFixed(1);
+                document.getElementById('p50').textContent = p50.toFixed(1);
+                document.getElementById('p85').textContent = p85.toFixed(1);
+                document.getElementById('p95').textContent = p95.toFixed(1);
+                
+                // Przygotuj dane dla histogramu
+                const binSize = 20; // Szerokość przedziału
+                const maxTime = Math.max(...times);
+                const numBins = Math.ceil(maxTime / binSize);
+                
+                // Inicjalizuj bins dla każdego rozmiaru
+                const bins = {
+                    S: Array(numBins).fill(0),
+                    M: Array(numBins).fill(0),
+                    L: Array(numBins).fill(0)
+                };
+                
+                // Wypełnij bins
+                data.forEach(item => {
+                    const binIndex = Math.min(Math.floor(item.time / binSize), numBins - 1);
+                    if (bins[item.size]) {
+                        bins[item.size][binIndex]++;
+                    }
+                });
+                
+                // Przygotuj etykiety
+                const labels = [];
+                for (let i = 0; i < numBins; i++) {
+                    labels.push(`${i * binSize}-${(i + 1) * binSize}`);
+                }
+                
+                // Utwórz wykres
+                const ctx = document.getElementById('histogramChart').getContext('2d');
+                const chart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: 'Rozmiar S',
+                            data: bins.S,
+                            backgroundColor: 'rgba(76, 175, 80, 0.7)',
+                            borderColor: 'rgba(76, 175, 80, 1)',
+                            borderWidth: 1
+                        },
+                        {
+                            label: 'Rozmiar M',
+                            data: bins.M,
+                            backgroundColor: 'rgba(33, 150, 243, 0.7)',
+                            borderColor: 'rgba(33, 150, 243, 1)',
+                            borderWidth: 1
+                        },
+                        {
+                            label: 'Rozmiar L',
+                            data: bins.L,
+                            backgroundColor: 'rgba(255, 152, 0, 0.7)',
+                            borderColor: 'rgba(255, 152, 0, 1)',
+                            borderWidth: 1
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: {
+                            stacked: true,
+                            title: {
+                                display: true,
+                                text: 'Czas realizacji',
+                                font: {
+                                    size: 14,
+                                    weight: 'bold'
+                                }
+                            }
+                        },
+                        y: {
+                            stacked: true,
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: 'Liczba zadań',
+                                font: {
+                                    size: 14,
+                                    weight: 'bold'
+                                }
+                            },
+                            ticks: {
+                                precision: 0
+                            }
+                        }
+                    },
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: 'Histogram Czasów Realizacji według Rozmiaru',
+                            font: {
+                                size: 16
+                            }
+                        },
+                        legend: {
+                            display: true,
+                            position: 'top'
+                        },
+                        tooltip: {
+                            callbacks: {
+                                footer: function(tooltipItems) {
+                                    const binStart = parseInt(tooltipItems[0].label.split('-')[0]);
+                                    const binEnd = binStart + binSize;
+                                    let footer = `\nStatystyki:`;
+                                    if (mean >= binStart && mean < binEnd) footer += `\n• Średnia: ${mean.toFixed(1)}`;
+                                    if (p50 >= binStart && p50 < binEnd) footer += `\n• P50: ${p50.toFixed(1)}`;
+                                    if (p85 >= binStart && p85 < binEnd) footer += `\n• P85: ${p85.toFixed(1)}`;
+                                    if (p95 >= binStart && p95 < binEnd) footer += `\n• P95: ${p95.toFixed(1)}`;
+                                    return footer;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+            } catch (error) {
+                console.error('Błąd podczas tworzenia histogramu:', error);
+                document.querySelector('.container').innerHTML += 
+                    '<div style="color: red; text-align: center; margin-top: 20px;">Wystąpił błąd podczas ładowania danych. Sprawdź konsolę przeglądarki, aby uzyskać więcej informacji.</div>';
+            }
+        }
+
+        // Uruchom po załadowaniu strony
+        createHistogram();
+    </script>
+</body>
+</html>
