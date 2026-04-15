@@ -67,11 +67,184 @@
             height: 20px;
             border-radius: 3px;
         }
+        .controls {
+            margin-top: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+        .add-button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+            transition: background-color 0.3s;
+        }
+        .add-button:hover {
+            background-color: #0056b3;
+        }
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+        }
+        .modal-content {
+            background-color: white;
+            margin: 10% auto;
+            padding: 30px;
+            border-radius: 8px;
+            width: 90%;
+            max-width: 400px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        .modal-header {
+            font-size: 20px;
+            font-weight: bold;
+            margin-bottom: 20px;
+            color: #333;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #555;
+        }
+        .form-group select,
+        .form-group input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+            box-sizing: border-box;
+        }
+        .form-group input:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: #007bff;
+        }
+        .form-buttons {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+            margin-top: 25px;
+        }
+        .save-button,
+        .cancel-button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: bold;
+            transition: background-color 0.3s;
+        }
+        .save-button {
+            background-color: #28a745;
+            color: white;
+        }
+        .save-button:hover {
+            background-color: #218838;
+        }
+        .save-button:disabled {
+            background-color: #6c757d;
+            cursor: not-allowed;
+        }
+        .cancel-button {
+            background-color: #6c757d;
+            color: white;
+        }
+        .cancel-button:hover {
+            background-color: #5a6268;
+        }
+        .error-message {
+            color: #dc3545;
+            font-size: 12px;
+            margin-top: 5px;
+            display: none;
+        }
+        .checkboxes {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+        .checkbox-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        .checkbox-item input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+        }
+        .checkbox-item label {
+            cursor: pointer;
+            user-select: none;
+        }
+        .size-stats {
+            margin-top: 30px;
+        }
+        .size-stats h2 {
+            color: #333;
+            margin-bottom: 20px;
+        }
+        .size-group {
+            margin-bottom: 25px;
+        }
+        .size-group h3 {
+            color: #555;
+            margin-bottom: 10px;
+            padding: 10px;
+            background-color: #f8f9fa;
+            border-radius: 5px;
+        }
+        .size-stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 10px;
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>Histogram Czasów Realizacji</h1>
+        
+        <div class="controls">
+            <button class="add-button" onclick="openModal()">Dodaj</button>
+            <div class="checkboxes">
+                <div class="checkbox-item">
+                    <input type="checkbox" id="showMean" checked onchange="updateChart()">
+                    <label for="showMean">Średnia</label>
+                </div>
+                <div class="checkbox-item">
+                    <input type="checkbox" id="showMedian" checked onchange="updateChart()">
+                    <label for="showMedian">Mediana</label>
+                </div>
+                <div class="checkbox-item">
+                    <input type="checkbox" id="showP85" checked onchange="updateChart()">
+                    <label for="showP85">P85</label>
+                </div>
+                <div class="checkbox-item">
+                    <input type="checkbox" id="showP95" checked onchange="updateChart()">
+                    <label for="showP95">P95</label>
+                </div>
+            </div>
+        </div>
         
         <div class="legend">
             <div class="legend-item">
@@ -94,25 +267,180 @@
 
         <div class="stats">
             <div class="stat-card">
-                <div class="stat-label">Średnia (Mean)</div>
+                <div class="stat-label">Średnia (Mean) - Wszystkie</div>
                 <div class="stat-value" id="mean">-</div>
             </div>
             <div class="stat-card">
-                <div class="stat-label">50. Percentyl (Mediana)</div>
+                <div class="stat-label">50. Percentyl (Mediana) - Wszystkie</div>
                 <div class="stat-value" id="p50">-</div>
             </div>
             <div class="stat-card">
-                <div class="stat-label">85. Percentyl</div>
+                <div class="stat-label">85. Percentyl - Wszystkie</div>
                 <div class="stat-value" id="p85">-</div>
             </div>
             <div class="stat-card">
-                <div class="stat-label">95. Percentyl</div>
+                <div class="stat-label">95. Percentyl - Wszystkie</div>
                 <div class="stat-value" id="p95">-</div>
+            </div>
+        </div>
+
+        <div class="size-stats">
+            <h2>Statystyki według rozmiaru</h2>
+            
+            <div class="size-group">
+                <h3>Rozmiar S (Small)</h3>
+                <div class="size-stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-label">Średnia</div>
+                        <div class="stat-value" id="mean-S">-</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Mediana</div>
+                        <div class="stat-value" id="p50-S">-</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">P85</div>
+                        <div class="stat-value" id="p85-S">-</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">P95</div>
+                        <div class="stat-value" id="p95-S">-</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="size-group">
+                <h3>Rozmiar M (Medium)</h3>
+                <div class="size-stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-label">Średnia</div>
+                        <div class="stat-value" id="mean-M">-</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Mediana</div>
+                        <div class="stat-value" id="p50-M">-</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">P85</div>
+                        <div class="stat-value" id="p85-M">-</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">P95</div>
+                        <div class="stat-value" id="p95-M">-</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="size-group">
+                <h3>Rozmiar L (Large)</h3>
+                <div class="size-stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-label">Średnia</div>
+                        <div class="stat-value" id="mean-L">-</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Mediana</div>
+                        <div class="stat-value" id="p50-L">-</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">P85</div>
+                        <div class="stat-value" id="p85-L">-</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">P95</div>
+                        <div class="stat-value" id="p95-L">-</div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
 
+    <!-- Modal for adding new data -->
+    <div id="addModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">Dodaj nową epikę</div>
+            <form id="addForm">
+                <div class="form-group">
+                    <label for="epicSize">Rozmiar epiki *</label>
+                    <select id="epicSize" required>
+                        <option value="">-- Wybierz rozmiar --</option>
+                        <option value="S">S (Small)</option>
+                        <option value="M">M (Medium)</option>
+                        <option value="L">L (Large)</option>
+                    </select>
+                    <div class="error-message" id="sizeError">Wybierz rozmiar epiki</div>
+                </div>
+                <div class="form-group">
+                    <label for="epicTime">Czas realizacji (dni) *</label>
+                    <input type="number" id="epicTime" min="1" step="1" placeholder="np. 45" required>
+                    <div class="error-message" id="timeError">Wprowadź czas realizacji (liczba większa od 0)</div>
+                </div>
+                <div class="form-buttons">
+                    <button type="button" class="cancel-button" onclick="closeModal()">Anuluj</button>
+                    <button type="submit" class="save-button">Zapisz</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <script>
+        // Global variables
+        let allData = [];
+        let chart = null;
+        
+        // Modal functions
+        function openModal() {
+            document.getElementById('addModal').style.display = 'block';
+            document.getElementById('addForm').reset();
+            hideErrors();
+        }
+        
+        function closeModal() {
+            document.getElementById('addModal').style.display = 'none';
+            document.getElementById('addForm').reset();
+            hideErrors();
+        }
+        
+        function hideErrors() {
+            document.getElementById('sizeError').style.display = 'none';
+            document.getElementById('timeError').style.display = 'none';
+        }
+        
+        // Close modal when clicking outside
+        window.onclick = function(event) {
+            const modal = document.getElementById('addModal');
+            if (event.target === modal) {
+                closeModal();
+            }
+        }
+        
+        // Form submission
+        document.getElementById('addForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const size = document.getElementById('epicSize').value;
+            const time = parseFloat(document.getElementById('epicTime').value);
+            
+            let isValid = true;
+            hideErrors();
+            
+            if (!size) {
+                document.getElementById('sizeError').style.display = 'block';
+                isValid = false;
+            }
+            
+            if (!time || time <= 0) {
+                document.getElementById('timeError').style.display = 'block';
+                isValid = false;
+            }
+            
+            if (isValid) {
+                allData.push({ size, time });
+                closeModal();
+                updateChart();
+            }
+        });
+        
         // Funkcja do wczytania i parsowania CSV
         async function loadCSV() {
             try {
@@ -148,6 +476,7 @@
 
         // Funkcja do obliczenia percentyla
         function calculatePercentile(values, percentile) {
+            if (values.length === 0) return 0;
             const sorted = [...values].sort((a, b) => a - b);
             const index = (percentile / 100) * (sorted.length - 1);
             const lower = Math.floor(index);
@@ -160,80 +489,230 @@
             
             return sorted[lower] * (1 - weight) + sorted[upper] * weight;
         }
-
-        // Funkcja do tworzenia histogramu
-        async function createHistogram() {
-            try {
-                const data = await loadCSV();
-                
-                // Oblicz statystyki
-                const times = data.map(d => d.time);
-                const mean = times.reduce((a, b) => a + b, 0) / times.length;
-                const p50 = calculatePercentile(times, 50);
-                const p85 = calculatePercentile(times, 85);
-                const p95 = calculatePercentile(times, 95);
-                
-                // Wyświetl statystyki
-                document.getElementById('mean').textContent = mean.toFixed(1);
-                document.getElementById('p50').textContent = p50.toFixed(1);
-                document.getElementById('p85').textContent = p85.toFixed(1);
-                document.getElementById('p95').textContent = p95.toFixed(1);
-                
-                // Przygotuj dane dla histogramu
-                const binSize = 20; // Szerokość przedziału
-                const maxTime = Math.max(...times);
-                const numBins = Math.ceil(maxTime / binSize);
-                
-                // Inicjalizuj bins dla każdego rozmiaru
-                const bins = {
-                    S: Array(numBins).fill(0),
-                    M: Array(numBins).fill(0),
-                    L: Array(numBins).fill(0)
-                };
-                
-                // Wypełnij bins
-                data.forEach(item => {
-                    const binIndex = Math.min(Math.floor(item.time / binSize), numBins - 1);
-                    if (bins[item.size]) {
-                        bins[item.size][binIndex]++;
-                    }
-                });
-                
-                // Przygotuj etykiety
-                const labels = [];
-                for (let i = 0; i < numBins; i++) {
-                    labels.push(`${i * binSize}-${(i + 1) * binSize}`);
+        
+        // Calculate statistics by size
+        function calculateStatsBySize(data) {
+            const statsBySize = {};
+            const sizes = ['S', 'M', 'L'];
+            
+            sizes.forEach(size => {
+                const sizeData = data.filter(d => d.size === size).map(d => d.time);
+                if (sizeData.length > 0) {
+                    statsBySize[size] = {
+                        mean: sizeData.reduce((a, b) => a + b, 0) / sizeData.length,
+                        p50: calculatePercentile(sizeData, 50),
+                        p85: calculatePercentile(sizeData, 85),
+                        p95: calculatePercentile(sizeData, 95),
+                        count: sizeData.length
+                    };
+                } else {
+                    statsBySize[size] = {
+                        mean: 0,
+                        p50: 0,
+                        p85: 0,
+                        p95: 0,
+                        count: 0
+                    };
                 }
-                
-                // Utwórz wykres
-                const ctx = document.getElementById('histogramChart').getContext('2d');
-                const chart = new Chart(ctx, {
+            });
+            
+            return statsBySize;
+        }
+        
+        // Update statistics display
+        function updateStatistics(data) {
+            const times = data.map(d => d.time);
+            const mean = times.reduce((a, b) => a + b, 0) / times.length;
+            const p50 = calculatePercentile(times, 50);
+            const p85 = calculatePercentile(times, 85);
+            const p95 = calculatePercentile(times, 95);
+            
+            document.getElementById('mean').textContent = mean.toFixed(1);
+            document.getElementById('p50').textContent = p50.toFixed(1);
+            document.getElementById('p85').textContent = p85.toFixed(1);
+            document.getElementById('p95').textContent = p95.toFixed(1);
+            
+            // Update statistics by size
+            const statsBySize = calculateStatsBySize(data);
+            ['S', 'M', 'L'].forEach(size => {
+                const stats = statsBySize[size];
+                if (stats.count > 0) {
+                    document.getElementById(`mean-${size}`).textContent = stats.mean.toFixed(1);
+                    document.getElementById(`p50-${size}`).textContent = stats.p50.toFixed(1);
+                    document.getElementById(`p85-${size}`).textContent = stats.p85.toFixed(1);
+                    document.getElementById(`p95-${size}`).textContent = stats.p95.toFixed(1);
+                } else {
+                    document.getElementById(`mean-${size}`).textContent = '-';
+                    document.getElementById(`p50-${size}`).textContent = '-';
+                    document.getElementById(`p85-${size}`).textContent = '-';
+                    document.getElementById(`p95-${size}`).textContent = '-';
+                }
+            });
+            
+            return { mean, p50, p85, p95 };
+        }
+
+        // Funkcja do tworzenia/aktualizacji histogramu
+        function updateChart() {
+            const data = allData;
+            const times = data.map(d => d.time);
+            
+            if (times.length === 0) {
+                console.error('Brak danych do wyświetlenia');
+                return;
+            }
+            
+            const stats = updateStatistics(data);
+            
+            // Przygotuj dane dla histogramu z przedziałami co 25 dni
+            const binSize = 25;
+            const maxTime = Math.max(...times);
+            const numBins = Math.ceil(maxTime / binSize);
+            
+            // Inicjalizuj bins dla każdego rozmiaru
+            const bins = {
+                S: Array(numBins).fill(0),
+                M: Array(numBins).fill(0),
+                L: Array(numBins).fill(0)
+            };
+            
+            // Wypełnij bins
+            data.forEach(item => {
+                const binIndex = Math.min(Math.floor(item.time / binSize), numBins - 1);
+                if (bins[item.size]) {
+                    bins[item.size][binIndex]++;
+                }
+            });
+            
+            // Przygotuj etykiety z przedziałami co 25 dni
+            const labels = [];
+            for (let i = 0; i < numBins; i++) {
+                const start = i * binSize;
+                const end = (i + 1) * binSize - 1;
+                labels.push(`${start}-${end}`);
+            }
+            
+            // Prepare datasets
+            const datasets = [
+                {
+                    label: 'Rozmiar S',
+                    data: bins.S,
+                    backgroundColor: 'rgba(76, 175, 80, 0.7)',
+                    borderColor: 'rgba(76, 175, 80, 1)',
+                    borderWidth: 1,
+                    type: 'bar'
+                },
+                {
+                    label: 'Rozmiar M',
+                    data: bins.M,
+                    backgroundColor: 'rgba(33, 150, 243, 0.7)',
+                    borderColor: 'rgba(33, 150, 243, 1)',
+                    borderWidth: 1,
+                    type: 'bar'
+                },
+                {
+                    label: 'Rozmiar L',
+                    data: bins.L,
+                    backgroundColor: 'rgba(255, 152, 0, 0.7)',
+                    borderColor: 'rgba(255, 152, 0, 1)',
+                    borderWidth: 1,
+                    type: 'bar'
+                }
+            ];
+            
+            // Add statistical lines based on checkbox state
+            const maxBinValue = Math.max(...bins.S, ...bins.M, ...bins.L);
+            
+            if (document.getElementById('showMean').checked) {
+                const meanBin = Math.floor(stats.mean / binSize);
+                const meanData = Array(numBins).fill(null);
+                if (meanBin < numBins) {
+                    meanData[meanBin] = maxBinValue * 1.1;
+                }
+                datasets.push({
+                    label: 'Średnia',
+                    data: meanData,
+                    type: 'line',
+                    borderColor: 'rgba(255, 0, 0, 1)',
+                    backgroundColor: 'rgba(255, 0, 0, 0.1)',
+                    borderWidth: 3,
+                    borderDash: [5, 5],
+                    pointRadius: 6,
+                    pointHoverRadius: 8,
+                    fill: false
+                });
+            }
+            
+            if (document.getElementById('showMedian').checked) {
+                const medianBin = Math.floor(stats.p50 / binSize);
+                const medianData = Array(numBins).fill(null);
+                if (medianBin < numBins) {
+                    medianData[medianBin] = maxBinValue * 1.1;
+                }
+                datasets.push({
+                    label: 'Mediana (P50)',
+                    data: medianData,
+                    type: 'line',
+                    borderColor: 'rgba(0, 128, 0, 1)',
+                    backgroundColor: 'rgba(0, 128, 0, 0.1)',
+                    borderWidth: 3,
+                    borderDash: [10, 5],
+                    pointRadius: 6,
+                    pointHoverRadius: 8,
+                    fill: false
+                });
+            }
+            
+            if (document.getElementById('showP85').checked) {
+                const p85Bin = Math.floor(stats.p85 / binSize);
+                const p85Data = Array(numBins).fill(null);
+                if (p85Bin < numBins) {
+                    p85Data[p85Bin] = maxBinValue * 1.1;
+                }
+                datasets.push({
+                    label: 'P85',
+                    data: p85Data,
+                    type: 'line',
+                    borderColor: 'rgba(255, 165, 0, 1)',
+                    backgroundColor: 'rgba(255, 165, 0, 0.1)',
+                    borderWidth: 3,
+                    pointRadius: 6,
+                    pointHoverRadius: 8,
+                    fill: false
+                });
+            }
+            
+            if (document.getElementById('showP95').checked) {
+                const p95Bin = Math.floor(stats.p95 / binSize);
+                const p95Data = Array(numBins).fill(null);
+                if (p95Bin < numBins) {
+                    p95Data[p95Bin] = maxBinValue * 1.1;
+                }
+                datasets.push({
+                    label: 'P95',
+                    data: p95Data,
+                    type: 'line',
+                    borderColor: 'rgba(128, 0, 128, 1)',
+                    backgroundColor: 'rgba(128, 0, 128, 0.1)',
+                    borderWidth: 3,
+                    pointRadius: 6,
+                    pointHoverRadius: 8,
+                    fill: false
+                });
+            }
+            
+            // Destroy existing chart if it exists
+            if (chart) {
+                chart.destroy();
+            }
+            
+            // Utwórz wykres
+            const ctx = document.getElementById('histogramChart').getContext('2d');
+            chart = new Chart(ctx, {
                 type: 'bar',
                 data: {
                     labels: labels,
-                    datasets: [
-                        {
-                            label: 'Rozmiar S',
-                            data: bins.S,
-                            backgroundColor: 'rgba(76, 175, 80, 0.7)',
-                            borderColor: 'rgba(76, 175, 80, 1)',
-                            borderWidth: 1
-                        },
-                        {
-                            label: 'Rozmiar M',
-                            data: bins.M,
-                            backgroundColor: 'rgba(33, 150, 243, 0.7)',
-                            borderColor: 'rgba(33, 150, 243, 1)',
-                            borderWidth: 1
-                        },
-                        {
-                            label: 'Rozmiar L',
-                            data: bins.L,
-                            backgroundColor: 'rgba(255, 152, 0, 0.7)',
-                            borderColor: 'rgba(255, 152, 0, 1)',
-                            borderWidth: 1
-                        }
-                    ]
+                    datasets: datasets
                 },
                 options: {
                     responsive: true,
@@ -243,7 +722,7 @@
                             stacked: true,
                             title: {
                                 display: true,
-                                text: 'Czas realizacji',
+                                text: 'Czas realizacji (dni)',
                                 font: {
                                     size: 14,
                                     weight: 'bold'
@@ -283,11 +762,11 @@
                                 footer: function(tooltipItems) {
                                     const binStart = parseInt(tooltipItems[0].label.split('-')[0]);
                                     const binEnd = binStart + binSize;
-                                    let footer = `\nStatystyki:`;
-                                    if (mean >= binStart && mean < binEnd) footer += `\n• Średnia: ${mean.toFixed(1)}`;
-                                    if (p50 >= binStart && p50 < binEnd) footer += `\n• P50: ${p50.toFixed(1)}`;
-                                    if (p85 >= binStart && p85 < binEnd) footer += `\n• P85: ${p85.toFixed(1)}`;
-                                    if (p95 >= binStart && p95 < binEnd) footer += `\n• P95: ${p95.toFixed(1)}`;
+                                    let footer = `\nStatystyki (wszystkie rozmiary):`;
+                                    if (stats.mean >= binStart && stats.mean < binEnd) footer += `\n• Średnia: ${stats.mean.toFixed(1)}`;
+                                    if (stats.p50 >= binStart && stats.p50 < binEnd) footer += `\n• P50: ${stats.p50.toFixed(1)}`;
+                                    if (stats.p85 >= binStart && stats.p85 < binEnd) footer += `\n• P85: ${stats.p85.toFixed(1)}`;
+                                    if (stats.p95 >= binStart && stats.p95 < binEnd) footer += `\n• P95: ${stats.p95.toFixed(1)}`;
                                     return footer;
                                 }
                             }
@@ -295,15 +774,22 @@
                     }
                 }
             });
+        }
+
+        // Initialize on page load
+        async function initialize() {
+            try {
+                allData = await loadCSV();
+                updateChart();
             } catch (error) {
-                console.error('Błąd podczas tworzenia histogramu:', error);
+                console.error('Błąd podczas inicjalizacji:', error);
                 document.querySelector('.container').innerHTML += 
                     '<div style="color: red; text-align: center; margin-top: 20px;">Wystąpił błąd podczas ładowania danych. Sprawdź konsolę przeglądarki, aby uzyskać więcej informacji.</div>';
             }
         }
 
         // Uruchom po załadowaniu strony
-        createHistogram();
+        initialize();
     </script>
 </body>
 </html>
