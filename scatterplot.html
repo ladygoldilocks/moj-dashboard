@@ -195,8 +195,8 @@
 
         // Load CSV data
         async function loadCSV() {
+            const fileName = '2. Scatterplot czasów realizacji.csv';
             try {
-                const fileName = '2. Scatterplot czasów realizacji.csv';
                 const response = await fetch(fileName);
                 if (!response.ok) {
                     throw new Error('Nie można załadować pliku CSV');
@@ -221,7 +221,7 @@
                             const dateParts = dateStr.split('.');
                             if (dateParts.length === 3) {
                                 const day = parseInt(dateParts[0]);
-                                const month = parseInt(dateParts[1]) - 1; // JS months are 0-indexed
+                                const month = parseInt(dateParts[1]) - 1; // Convert from 1-12 (CSV) to 0-11 (JavaScript months)
                                 const year = parseInt(dateParts[2]);
                                 
                                 // Validate basic date components
@@ -336,8 +336,8 @@
                         pointRadius: 6,
                         pointHoverRadius: 8,
                         type: 'scatter',
-                        size: size, // Store size as metadata for robust access
-                        sizeData: sizeData // Store full data for tooltip access
+                        size: size, // Store size metadata (Chart.js tooltips only provide dataset/index, not original data)
+                        sizeData: sizeData // Store full data for tooltip access to original properties
                     });
 
                     // Add trend line if enabled
