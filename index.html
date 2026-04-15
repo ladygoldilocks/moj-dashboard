@@ -122,22 +122,22 @@
                 }
                 const text = await response.text();
                 const lines = text.trim().split('\n');
-            
-            const data = [];
-            for (let i = 1; i < lines.length; i++) {
-                const line = lines[i].trim();
-                if (!line) continue;
                 
-                const parts = line.split(';');
-                if (parts.length >= 2) {
-                    const size = parts[0].trim();
-                    const time = parseFloat(parts[1].trim());
-                    if (!isNaN(time)) {
-                        data.push({ size, time });
+                const data = [];
+                for (let i = 1; i < lines.length; i++) {
+                    const line = lines[i].trim();
+                    if (!line) continue;
+                    
+                    const parts = line.split(';');
+                    if (parts.length >= 2) {
+                        const size = parts[0].trim();
+                        const time = parseFloat(parts[1].trim());
+                        if (!isNaN(time)) {
+                            data.push({ size, time });
+                        }
                     }
                 }
-            }
-            
+                
                 return data;
             } catch (error) {
                 console.error('Błąd podczas wczytywania danych:', error);
@@ -165,49 +165,49 @@
         async function createHistogram() {
             try {
                 const data = await loadCSV();
-            
-            // Oblicz statystyki
-            const times = data.map(d => d.time);
-            const mean = times.reduce((a, b) => a + b, 0) / times.length;
-            const p50 = calculatePercentile(times, 50);
-            const p85 = calculatePercentile(times, 85);
-            const p95 = calculatePercentile(times, 95);
-            
-            // Wyświetl statystyki
-            document.getElementById('mean').textContent = mean.toFixed(1);
-            document.getElementById('p50').textContent = p50.toFixed(1);
-            document.getElementById('p85').textContent = p85.toFixed(1);
-            document.getElementById('p95').textContent = p95.toFixed(1);
-            
-            // Przygotuj dane dla histogramu
-            const binSize = 20; // Szerokość przedziału
-            const maxTime = Math.max(...times);
-            const numBins = Math.ceil(maxTime / binSize);
-            
-            // Inicjalizuj bins dla każdego rozmiaru
-            const bins = {
-                S: Array(numBins).fill(0),
-                M: Array(numBins).fill(0),
-                L: Array(numBins).fill(0)
-            };
-            
-            // Wypełnij bins
-            data.forEach(item => {
-                const binIndex = Math.min(Math.floor(item.time / binSize), numBins - 1);
-                if (bins[item.size]) {
-                    bins[item.size][binIndex]++;
+                
+                // Oblicz statystyki
+                const times = data.map(d => d.time);
+                const mean = times.reduce((a, b) => a + b, 0) / times.length;
+                const p50 = calculatePercentile(times, 50);
+                const p85 = calculatePercentile(times, 85);
+                const p95 = calculatePercentile(times, 95);
+                
+                // Wyświetl statystyki
+                document.getElementById('mean').textContent = mean.toFixed(1);
+                document.getElementById('p50').textContent = p50.toFixed(1);
+                document.getElementById('p85').textContent = p85.toFixed(1);
+                document.getElementById('p95').textContent = p95.toFixed(1);
+                
+                // Przygotuj dane dla histogramu
+                const binSize = 20; // Szerokość przedziału
+                const maxTime = Math.max(...times);
+                const numBins = Math.ceil(maxTime / binSize);
+                
+                // Inicjalizuj bins dla każdego rozmiaru
+                const bins = {
+                    S: Array(numBins).fill(0),
+                    M: Array(numBins).fill(0),
+                    L: Array(numBins).fill(0)
+                };
+                
+                // Wypełnij bins
+                data.forEach(item => {
+                    const binIndex = Math.min(Math.floor(item.time / binSize), numBins - 1);
+                    if (bins[item.size]) {
+                        bins[item.size][binIndex]++;
+                    }
+                });
+                
+                // Przygotuj etykiety
+                const labels = [];
+                for (let i = 0; i < numBins; i++) {
+                    labels.push(`${i * binSize}-${(i + 1) * binSize}`);
                 }
-            });
-            
-            // Przygotuj etykiety
-            const labels = [];
-            for (let i = 0; i < numBins; i++) {
-                labels.push(`${i * binSize}-${(i + 1) * binSize}`);
-            }
-            
-            // Utwórz wykres
-            const ctx = document.getElementById('histogramChart').getContext('2d');
-            const chart = new Chart(ctx, {
+                
+                // Utwórz wykres
+                const ctx = document.getElementById('histogramChart').getContext('2d');
+                const chart = new Chart(ctx, {
                 type: 'bar',
                 data: {
                     labels: labels,
