@@ -623,82 +623,44 @@
             // Add statistical lines based on checkbox state
             const maxBinValue = Math.max(...bins.S, ...bins.M, ...bins.L);
             
-            if (document.getElementById('showMean').checked) {
-                const meanBin = Math.floor(stats.mean / binSize);
-                const meanData = Array(numBins).fill(null);
-                if (meanBin < numBins) {
-                    meanData[meanBin] = maxBinValue * 1.1;
+            // Helper function to create statistical line dataset
+            function createStatLine(value, label, color, dashPattern) {
+                const bin = Math.floor(value / binSize);
+                const lineData = Array(numBins).fill(null);
+                const height = Math.max(maxBinValue * 1.1, 1); // Ensure minimum height of 1
+                
+                if (bin < numBins) {
+                    lineData[bin] = height;
                 }
-                datasets.push({
-                    label: 'Średnia',
-                    data: meanData,
+                
+                return {
+                    label: label,
+                    data: lineData,
                     type: 'line',
-                    borderColor: 'rgba(255, 0, 0, 1)',
-                    backgroundColor: 'rgba(255, 0, 0, 0.1)',
+                    borderColor: color,
+                    backgroundColor: color.replace('1)', '0.1)'),
                     borderWidth: 3,
-                    borderDash: [5, 5],
+                    borderDash: dashPattern,
                     pointRadius: 6,
                     pointHoverRadius: 8,
                     fill: false
-                });
+                };
+            }
+            
+            if (document.getElementById('showMean').checked) {
+                datasets.push(createStatLine(stats.mean, 'Średnia', 'rgba(255, 0, 0, 1)', [5, 5]));
             }
             
             if (document.getElementById('showMedian').checked) {
-                const medianBin = Math.floor(stats.p50 / binSize);
-                const medianData = Array(numBins).fill(null);
-                if (medianBin < numBins) {
-                    medianData[medianBin] = maxBinValue * 1.1;
-                }
-                datasets.push({
-                    label: 'Mediana (P50)',
-                    data: medianData,
-                    type: 'line',
-                    borderColor: 'rgba(0, 128, 0, 1)',
-                    backgroundColor: 'rgba(0, 128, 0, 0.1)',
-                    borderWidth: 3,
-                    borderDash: [10, 5],
-                    pointRadius: 6,
-                    pointHoverRadius: 8,
-                    fill: false
-                });
+                datasets.push(createStatLine(stats.p50, 'Mediana (P50)', 'rgba(0, 128, 0, 1)', [10, 5]));
             }
             
             if (document.getElementById('showP85').checked) {
-                const p85Bin = Math.floor(stats.p85 / binSize);
-                const p85Data = Array(numBins).fill(null);
-                if (p85Bin < numBins) {
-                    p85Data[p85Bin] = maxBinValue * 1.1;
-                }
-                datasets.push({
-                    label: 'P85',
-                    data: p85Data,
-                    type: 'line',
-                    borderColor: 'rgba(255, 165, 0, 1)',
-                    backgroundColor: 'rgba(255, 165, 0, 0.1)',
-                    borderWidth: 3,
-                    pointRadius: 6,
-                    pointHoverRadius: 8,
-                    fill: false
-                });
+                datasets.push(createStatLine(stats.p85, 'P85', 'rgba(255, 165, 0, 1)', []));
             }
             
             if (document.getElementById('showP95').checked) {
-                const p95Bin = Math.floor(stats.p95 / binSize);
-                const p95Data = Array(numBins).fill(null);
-                if (p95Bin < numBins) {
-                    p95Data[p95Bin] = maxBinValue * 1.1;
-                }
-                datasets.push({
-                    label: 'P95',
-                    data: p95Data,
-                    type: 'line',
-                    borderColor: 'rgba(128, 0, 128, 1)',
-                    backgroundColor: 'rgba(128, 0, 128, 0.1)',
-                    borderWidth: 3,
-                    pointRadius: 6,
-                    pointHoverRadius: 8,
-                    fill: false
-                });
+                datasets.push(createStatLine(stats.p95, 'P95', 'rgba(128, 0, 128, 1)', []));
             }
             
             // Destroy existing chart if it exists
