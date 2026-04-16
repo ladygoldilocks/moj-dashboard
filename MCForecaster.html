@@ -715,15 +715,22 @@
         function parseCSV(text) {
             const lines = text.trim().split('\n');
             const values = [];
+            let skippedCount = 0;
             
             for (let line of lines) {
                 const parts = line.split(/[,;\t]/).map(p => p.trim());
                 for (let part of parts) {
                     const num = parseFloat(part);
-                    if (!isNaN(num) && num > 0) {
+                    if (!isNaN(num) && num >= 0) {
                         values.push(num);
+                    } else if (part && !isNaN(parseFloat(part)) && parseFloat(part) < 0) {
+                        skippedCount++;
                     }
                 }
+            }
+            
+            if (skippedCount > 0) {
+                console.log(`Pomięto ${skippedCount} wartości ujemnych podczas parsowania CSV`);
             }
             
             return values;
@@ -770,7 +777,7 @@
             const manualInput = document.getElementById('manualThroughput').value.trim();
             if (!manualInput) return [];
             
-            const values = manualInput.split(',').map(v => parseFloat(v.trim())).filter(v => !isNaN(v) && v > 0);
+            const values = manualInput.split(',').map(v => parseFloat(v.trim())).filter(v => !isNaN(v) && v >= 0);
             return values;
         }
 
@@ -800,6 +807,8 @@
         }
 
         // Calculate percentile
+        // Uses the "nearest rank" method: index = ceil((percentile/100) * length) - 1
+        // This matches the formula documented in repository memories for consistency
         function getPercentile(sortedArray, percentile) {
             if (sortedArray.length === 0) return 0;
             const index = Math.ceil((percentile / 100) * sortedArray.length) - 1;
