@@ -503,6 +503,21 @@
         
         <div class="decorative-line"></div>
         
+        <!-- Dates Section -->
+        <div class="section">
+            <h2>Daty Projektu</h2>
+            <div class="date-group">
+                <div class="input-group">
+                    <label for="startDate">📅 Data Rozpoczęcia Prac:</label>
+                    <input type="date" id="startDate" required onchange="updateMonthlyCapacity()">
+                </div>
+                <div class="input-group">
+                    <label for="targetDate">🎯 Oczekiwana Data Dostarczenia:</label>
+                    <input type="date" id="targetDate" required onchange="updateMonthlyCapacity()">
+                </div>
+            </div>
+        </div>
+        
         <!-- Epics Table Section -->
         <div class="section">
             <h2>Epiki do Dostarczenia</h2>
@@ -573,46 +588,12 @@
             <div class="error-message" id="throughputError"></div>
         </div>
 
-        <!-- Capacity Focus Section -->
+        <!-- Monthly Capacity Focus Section -->
         <div class="section">
-            <h2>Stopień Focusu na Dostarczaniu</h2>
-            <p style="color: #9b7ea0; margin-bottom: 15px;">Określ, w jakim stopniu zespół będzie pracował w ramach pełnego capacity:</p>
-            <div class="capacity-options">
-                <div class="capacity-option">
-                    <input type="radio" id="capacity0" name="capacity" value="0">
-                    <label for="capacity0">0%</label>
-                </div>
-                <div class="capacity-option">
-                    <input type="radio" id="capacity25" name="capacity" value="25">
-                    <label for="capacity25">25%</label>
-                </div>
-                <div class="capacity-option">
-                    <input type="radio" id="capacity50" name="capacity" value="50">
-                    <label for="capacity50">50%</label>
-                </div>
-                <div class="capacity-option">
-                    <input type="radio" id="capacity75" name="capacity" value="75">
-                    <label for="capacity75">75%</label>
-                </div>
-                <div class="capacity-option">
-                    <input type="radio" id="capacity100" name="capacity" value="100" checked>
-                    <label for="capacity100">100%</label>
-                </div>
-            </div>
-        </div>
-
-        <!-- Dates Section -->
-        <div class="section">
-            <h2>Daty Projektu</h2>
-            <div class="date-group">
-                <div class="input-group">
-                    <label for="startDate">📅 Data Rozpoczęcia Prac:</label>
-                    <input type="date" id="startDate" required>
-                </div>
-                <div class="input-group">
-                    <label for="targetDate">🎯 Oczekiwana Data Dostarczenia:</label>
-                    <input type="date" id="targetDate" required>
-                </div>
+            <h2>Stopień Focusu na Dostarczaniu (Miesięczny)</h2>
+            <p style="color: #9b7ea0; margin-bottom: 15px;">Określ, w jakim stopniu zespół będzie pracował w ramach pełnego capacity dla każdego miesiąca:</p>
+            <div id="monthlyCapacityContainer">
+                <p style="color: #9b7ea0; font-style: italic;">Proszę wybrać daty projektu powyżej, aby określić focus dla poszczególnych miesięcy.</p>
             </div>
         </div>
 
@@ -690,6 +671,108 @@
         function updateFocusValue() {
             const value = document.getElementById('teamFocus').value;
             document.getElementById('focusValue').textContent = value + '%';
+        }
+
+        // Get list of months between two dates
+        function getMonthsBetweenDates(startDate, endDate) {
+            const months = [];
+            const current = new Date(startDate);
+            current.setDate(1); // Start from first day of month
+            
+            const end = new Date(endDate);
+            end.setDate(1);
+            
+            while (current <= end) {
+                months.push({
+                    year: current.getFullYear(),
+                    month: current.getMonth(),
+                    display: current.toLocaleDateString('pl-PL', { year: 'numeric', month: 'long' })
+                });
+                current.setMonth(current.getMonth() + 1);
+            }
+            
+            return months;
+        }
+
+        // Update monthly capacity inputs based on selected dates
+        function updateMonthlyCapacity() {
+            const startDate = document.getElementById('startDate').value;
+            const targetDate = document.getElementById('targetDate').value;
+            const container = document.getElementById('monthlyCapacityContainer');
+            
+            if (!startDate || !targetDate) {
+                container.innerHTML = '<p style="color: #9b7ea0; font-style: italic;">Proszę wybrać daty projektu powyżej, aby określić focus dla poszczególnych miesięcy.</p>';
+                return;
+            }
+            
+            const startDateObj = new Date(startDate);
+            const targetDateObj = new Date(targetDate);
+            
+            if (targetDateObj <= startDateObj) {
+                container.innerHTML = '<p style="color: #8b5a8e; font-style: italic;">Data dostarczenia musi być późniejsza niż data rozpoczęcia.</p>';
+                return;
+            }
+            
+            const months = getMonthsBetweenDates(startDateObj, targetDateObj);
+            
+            let html = '<div style="display: grid; gap: 15px;">';
+            months.forEach((month, index) => {
+                const monthKey = `${month.year}-${month.month}`;
+                html += `
+                    <div style="background: linear-gradient(135deg, #fff9fc 0%, #f5f9ff 100%); padding: 15px; border-radius: 10px; border: 1px solid #ffe4f2;">
+                        <div style="margin-bottom: 10px; font-weight: 600; color: #8b5a8e;">📅 ${month.display}</div>
+                        <div class="capacity-options">
+                            <div class="capacity-option">
+                                <input type="radio" id="capacity_${monthKey}_0" name="capacity_${monthKey}" value="0">
+                                <label for="capacity_${monthKey}_0">0%</label>
+                            </div>
+                            <div class="capacity-option">
+                                <input type="radio" id="capacity_${monthKey}_25" name="capacity_${monthKey}" value="25">
+                                <label for="capacity_${monthKey}_25">25%</label>
+                            </div>
+                            <div class="capacity-option">
+                                <input type="radio" id="capacity_${monthKey}_50" name="capacity_${monthKey}" value="50">
+                                <label for="capacity_${monthKey}_50">50%</label>
+                            </div>
+                            <div class="capacity-option">
+                                <input type="radio" id="capacity_${monthKey}_75" name="capacity_${monthKey}" value="75">
+                                <label for="capacity_${monthKey}_75">75%</label>
+                            </div>
+                            <div class="capacity-option">
+                                <input type="radio" id="capacity_${monthKey}_100" name="capacity_${monthKey}" value="100" checked>
+                                <label for="capacity_${monthKey}_100">100%</label>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+            html += '</div>';
+            
+            container.innerHTML = html;
+        }
+
+        // Get monthly capacity values
+        function getMonthlyCapacities() {
+            const startDate = document.getElementById('startDate').value;
+            const targetDate = document.getElementById('targetDate').value;
+            
+            if (!startDate || !targetDate) return [];
+            
+            const startDateObj = new Date(startDate);
+            const targetDateObj = new Date(targetDate);
+            const months = getMonthsBetweenDates(startDateObj, targetDateObj);
+            
+            const capacities = [];
+            months.forEach(month => {
+                const monthKey = `${month.year}-${month.month}`;
+                const selectedRadio = document.querySelector(`input[name="capacity_${monthKey}"]:checked`);
+                capacities.push({
+                    month: month,
+                    capacity: selectedRadio ? parseInt(selectedRadio.value) : 100
+                });
+            });
+            
+            return capacities;
         }
 
         // Handle CSV upload
@@ -781,23 +864,32 @@
             return values;
         }
 
-        // Monte Carlo simulation
-        function runMonteCarloSimulation(targetItems, throughput, teamFocus, capacity) {
+        // Monte Carlo simulation with monthly capacity
+        function runMonteCarloSimulation(targetItems, throughput, teamFocus, startDate, monthlyCapacities, sprintLength) {
             const numSimulations = 10000;
             const results = [];
-            
-            // Apply team focus and capacity adjustments
-            const adjustedThroughput = throughput.map(v => v * (teamFocus / 100) * (capacity / 100));
             
             for (let sim = 0; sim < numSimulations; sim++) {
                 let itemsCompleted = 0;
                 let sprintCount = 0;
+                let currentDate = new Date(startDate);
                 
                 while (itemsCompleted < targetItems) {
-                    const randomIndex = Math.floor(Math.random() * adjustedThroughput.length);
-                    const throughputValue = adjustedThroughput[randomIndex];
+                    // Get capacity for current month
+                    const currentMonth = currentDate.getMonth();
+                    const currentYear = currentDate.getFullYear();
+                    const monthCapacity = monthlyCapacities.find(mc => 
+                        mc.month.month === currentMonth && mc.month.year === currentYear
+                    );
+                    const capacity = monthCapacity ? monthCapacity.capacity : 100;
+                    
+                    // Apply team focus and capacity adjustments
+                    const randomIndex = Math.floor(Math.random() * throughput.length);
+                    const throughputValue = throughput[randomIndex] * (teamFocus / 100) * (capacity / 100);
+                    
                     itemsCompleted += throughputValue;
                     sprintCount++;
+                    currentDate.setDate(currentDate.getDate() + (sprintLength * 7));
                 }
                 
                 results.push(sprintCount);
@@ -829,20 +921,28 @@
             return `${date.getDate()} ${months[date.getMonth()]} ${date.getFullYear()}`;
         }
 
-        // Calculate probability of delivery by target date
-        function calculateProbabilityByDate(startDate, targetDate, totalItems, throughput, teamFocus, capacity, sprintLength) {
+        // Calculate probability of delivery by target date with monthly capacity
+        function calculateProbabilityByDate(startDate, targetDate, totalItems, throughput, teamFocus, monthlyCapacities, sprintLength) {
             const numSimulations = 10000;
             let successCount = 0;
-            
-            const adjustedThroughput = throughput.map(v => v * (teamFocus / 100) * (capacity / 100));
             
             for (let sim = 0; sim < numSimulations; sim++) {
                 let itemsCompleted = 0;
                 let currentDate = new Date(startDate);
                 
                 while (currentDate <= targetDate && itemsCompleted < totalItems) {
-                    const randomIndex = Math.floor(Math.random() * adjustedThroughput.length);
-                    const throughputValue = adjustedThroughput[randomIndex];
+                    // Get capacity for current month
+                    const currentMonth = currentDate.getMonth();
+                    const currentYear = currentDate.getFullYear();
+                    const monthCapacity = monthlyCapacities.find(mc => 
+                        mc.month.month === currentMonth && mc.month.year === currentYear
+                    );
+                    const capacity = monthCapacity ? monthCapacity.capacity : 100;
+                    
+                    // Apply team focus and capacity adjustments
+                    const randomIndex = Math.floor(Math.random() * throughput.length);
+                    const throughputValue = throughput[randomIndex] * (teamFocus / 100) * (capacity / 100);
+                    
                     itemsCompleted += throughputValue;
                     currentDate.setDate(currentDate.getDate() + (sprintLength * 7));
                 }
@@ -906,14 +1006,14 @@
             }
 
             const teamFocus = parseInt(document.getElementById('teamFocus').value);
-            const capacity = parseInt(document.querySelector('input[name="capacity"]:checked').value);
+            const monthlyCapacities = getMonthlyCapacities();
             const sprintLength = parseInt(document.querySelector('input[name="sprintLength"]:checked').value);
 
             // Calculate total items (average of min and max for each epic)
             const totalItems = epics.reduce((sum, epic) => sum + (epic.min + epic.max) / 2, 0);
 
             // Run Monte Carlo simulation
-            const simulationResults = runMonteCarloSimulation(totalItems, throughput, teamFocus, capacity);
+            const simulationResults = runMonteCarloSimulation(totalItems, throughput, teamFocus, startDateObj, monthlyCapacities, sprintLength);
 
             // Calculate percentiles
             const p85 = getPercentile(simulationResults, 85);
@@ -926,7 +1026,7 @@
             const p50Date = getDateFromSprints(startDateObj, p50, sprintLength);
 
             // Calculate probability of delivery by target date
-            const probability = calculateProbabilityByDate(startDateObj, targetDateObj, totalItems, throughput, teamFocus, capacity, sprintLength);
+            const probability = calculateProbabilityByDate(startDateObj, targetDateObj, totalItems, throughput, teamFocus, monthlyCapacities, sprintLength);
 
             // Display results
             displayResults(simulationResults, p85, p95, p50, p85Date, p95Date, p50Date, probability, totalItems, formatDate(targetDateObj));
@@ -1037,6 +1137,9 @@
             const targetDate = new Date();
             targetDate.setMonth(targetDate.getMonth() + 3);
             document.getElementById('targetDate').value = targetDate.toISOString().split('T')[0];
+            
+            // Initialize monthly capacity options
+            updateMonthlyCapacity();
         };
     </script>
 </body>
