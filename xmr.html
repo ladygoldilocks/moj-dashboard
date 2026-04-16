@@ -437,11 +437,11 @@
                 weeklyData[key].count += 1;
             });
             
-            // Convert to array and calculate averages
+            // Convert to array and use sum (total weekly throughput)
             const result = Object.values(weeklyData)
                 .map(w => ({
                     label: w.key,
-                    value: w.sum / w.count,
+                    value: w.sum,
                     year: w.year,
                     week: w.week
                 }))
@@ -477,11 +477,11 @@
                 weeklyData[key].count += 1;
             });
             
-            // Convert to array and calculate averages
+            // Convert to array and use sum (total weekly throughput)
             const result = Object.values(weeklyData)
                 .map(w => ({
                     label: w.key,
-                    value: w.sum / w.count,
+                    value: w.sum,
                     year: w.year,
                     week: w.week
                 }))
