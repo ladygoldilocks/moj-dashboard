@@ -429,7 +429,7 @@
             // URL and LRL for Moving Ranges chart
             // URL = Mean MR + URL_LRL_COEFFICIENT × Mean MR = Mean MR × (1 + URL_LRL_COEFFICIENT)
             // LRL = Mean MR - URL_LRL_COEFFICIENT × Mean MR = Mean MR × (1 - URL_LRL_COEFFICIENT)
-            // Note: LRL will typically be 0 since (1 - 3.27) is negative
+            // Note: Since (1 - 3.27) = -2.27 is negative, LRL will always be 0 for positive Mean MR values
             const url = avgMovingRange * (1 + URL_LRL_COEFFICIENT);
             const lrl = Math.max(0, avgMovingRange * (1 - URL_LRL_COEFFICIENT)); // Can't be negative
             
