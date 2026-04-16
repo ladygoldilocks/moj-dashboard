@@ -132,6 +132,34 @@
             border-radius: 5px;
             border-left: 4px solid #f44336;
         }
+        .stats-table {
+            margin-top: 40px;
+            width: 100%;
+            border-collapse: collapse;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .stats-table th {
+            background-color: #007bff;
+            color: white;
+            padding: 12px;
+            text-align: left;
+            font-weight: 600;
+        }
+        .stats-table td {
+            padding: 12px;
+            border-bottom: 1px solid #ddd;
+            background-color: #f8f9fa;
+        }
+        .stats-table tr:hover td {
+            background-color: #e9ecef;
+        }
+        .table-section-title {
+            margin-top: 50px;
+            font-size: 22px;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 20px;
+        }
     </style>
 </head>
 <body>
@@ -166,6 +194,33 @@
 
         <div class="chart-container">
             <canvas id="pcbChart"></canvas>
+        </div>
+
+        <div class="legend" style="margin-top: 50px;">
+            <div class="legend-item">
+                <div class="legend-line" style="background-color: #9C27B0;"></div>
+                <span>Zakresy ruchome (Moving Ranges)</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-line" style="background-color: #4CAF50;"></div>
+                <span>Średnia MR</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-line" style="background-color: #2196F3;"></div>
+                <span>Mediana MR</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-line" style="border: 2px dashed #FF5722; background-color: transparent;"></div>
+                <span>URL (Górna granica zakresu)</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-line" style="border: 2px dashed #FF9800; background-color: transparent;"></div>
+                <span>LRL (Dolna granica zakresu)</span>
+            </div>
+        </div>
+
+        <div class="chart-container">
+            <canvas id="mrChart"></canvas>
         </div>
 
         <div class="predictability-section">
@@ -223,12 +278,70 @@
                 <div class="stat-value" id="maxCycleTime">-<span class="stat-unit">dni</span></div>
             </div>
         </div>
+
+        <div class="table-section-title">Statystyki procesu</div>
+        <table class="stats-table">
+            <thead>
+                <tr>
+                    <th>Miara</th>
+                    <th>Wartość</th>
+                    <th>Opis</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>Średnia (Mean)</strong></td>
+                    <td id="table-mean">-</td>
+                    <td>Średni czas realizacji wszystkich zadań</td>
+                </tr>
+                <tr>
+                    <td><strong>Mediana</strong></td>
+                    <td id="table-median">-</td>
+                    <td>Wartość środkowa czasów realizacji</td>
+                </tr>
+                <tr>
+                    <td><strong>UNPL</strong></td>
+                    <td id="table-unpl">-</td>
+                    <td>Górna naturalna granica procesu (wykres X)</td>
+                </tr>
+                <tr>
+                    <td><strong>LNPL</strong></td>
+                    <td id="table-lnpl">-</td>
+                    <td>Dolna naturalna granica procesu (wykres X)</td>
+                </tr>
+                <tr>
+                    <td><strong>Średnia Moving Range</strong></td>
+                    <td id="table-mr-mean">-</td>
+                    <td>Średnia wartość zakresów ruchomych</td>
+                </tr>
+                <tr>
+                    <td><strong>Mediana Moving Range</strong></td>
+                    <td id="table-mr-median">-</td>
+                    <td>Mediana wartości zakresów ruchomych</td>
+                </tr>
+                <tr>
+                    <td><strong>URL (Upper Range Limit)</strong></td>
+                    <td id="table-url">-</td>
+                    <td>Górna granica zakresów ruchomych (Mean MR + 3.27 × Mean MR)</td>
+                </tr>
+                <tr>
+                    <td><strong>LRL (Lower Range Limit)</strong></td>
+                    <td id="table-lrl">-</td>
+                    <td>Dolna granica zakresów ruchomych (max(0, Mean MR - 3.27 × Mean MR))</td>
+                </tr>
+            </tbody>
+        </table>
     </div>
 
     <script>
         const CSV_FILENAME = '3. PCB Czas realizacji.csv';
         
+        // Statistical constants for control charts
+        const E2_CONSTANT = 2.66;  // E2 constant for individuals chart with moving ranges (X chart)
+        const URL_LRL_COEFFICIENT = 3.27;  // Coefficient for Moving Ranges chart control limits
+        
         let chart = null;
+        let mrChart = null;
         let allData = [];
 
         // Load CSV data
@@ -299,13 +412,31 @@
                 ? movingRanges.reduce((sum, val) => sum + val, 0) / movingRanges.length 
                 : 0;
             
-            // Control limits for X chart (individuals chart)
-            // Using E2 constant (2.66) for individuals chart with moving ranges
-            const controlFactor = 2.66; // E2 constant for individuals chart
+            // Median
+            const sortedCycleTimes = [...cycleTimes].sort((a, b) => a - b);
+            const median = sortedCycleTimes.length % 2 === 0
+                ? (sortedCycleTimes[sortedCycleTimes.length / 2 - 1] + sortedCycleTimes[sortedCycleTimes.length / 2]) / 2
+                : sortedCycleTimes[Math.floor(sortedCycleTimes.length / 2)];
             
-            // UNPL and LNPL using moving range method
-            const unpl = mean + (controlFactor * avgMovingRange);
-            const lnpl = Math.max(0, mean - (controlFactor * avgMovingRange)); // Can't be negative
+            // Median of moving ranges
+            const sortedMR = [...movingRanges].sort((a, b) => a - b);
+            const medianMR = sortedMR.length > 0 
+                ? (sortedMR.length % 2 === 0
+                    ? (sortedMR[sortedMR.length / 2 - 1] + sortedMR[sortedMR.length / 2]) / 2
+                    : sortedMR[Math.floor(sortedMR.length / 2)])
+                : 0;
+            
+            // URL and LRL for Moving Ranges chart
+            // URL = Mean MR + URL_LRL_COEFFICIENT × Mean MR = Mean MR × (1 + URL_LRL_COEFFICIENT)
+            // LRL = Mean MR - URL_LRL_COEFFICIENT × Mean MR = Mean MR × (1 - URL_LRL_COEFFICIENT)
+            // Note: Since (1 - 3.27) = -2.27 is negative, LRL will always be 0 for positive Mean MR values
+            const url = avgMovingRange * (1 + URL_LRL_COEFFICIENT);
+            const lrl = Math.max(0, avgMovingRange * (1 - URL_LRL_COEFFICIENT)); // Can't be negative
+            
+            // Control limits for X chart (individuals chart)
+            // Using E2 constant for individuals chart with moving ranges
+            const unpl = mean + (E2_CONSTANT * avgMovingRange);
+            const lnpl = Math.max(0, mean - (E2_CONSTANT * avgMovingRange)); // Can't be negative
             
             // Min and max
             const minCycleTime = Math.min(...cycleTimes);
@@ -313,10 +444,15 @@
             
             return {
                 mean: mean,
+                median: median,
                 stdDev: stdDev,
                 unpl: unpl,
                 lnpl: lnpl,
                 avgMovingRange: avgMovingRange,
+                medianMR: medianMR,
+                url: url,
+                lrl: lrl,
+                movingRanges: movingRanges,
                 minCycleTime: minCycleTime,
                 maxCycleTime: maxCycleTime,
                 controlRange: unpl - lnpl
@@ -425,6 +561,16 @@
             document.getElementById('controlRange').innerHTML = `${stats.controlRange.toFixed(1)}<span class="stat-unit">dni</span>`;
             document.getElementById('minCycleTime').innerHTML = `${stats.minCycleTime}<span class="stat-unit">dni</span>`;
             document.getElementById('maxCycleTime').innerHTML = `${stats.maxCycleTime}<span class="stat-unit">dni</span>`;
+            
+            // Update table statistics
+            document.getElementById('table-mean').textContent = `${stats.mean.toFixed(1)} dni`;
+            document.getElementById('table-median').textContent = `${stats.median.toFixed(1)} dni`;
+            document.getElementById('table-unpl').textContent = `${stats.unpl.toFixed(1)} dni`;
+            document.getElementById('table-lnpl').textContent = `${stats.lnpl.toFixed(1)} dni`;
+            document.getElementById('table-mr-mean').textContent = `${stats.avgMovingRange.toFixed(1)} dni`;
+            document.getElementById('table-mr-median').textContent = `${stats.medianMR.toFixed(1)} dni`;
+            document.getElementById('table-url').textContent = `${stats.url.toFixed(1)} dni`;
+            document.getElementById('table-lrl').textContent = `${stats.lrl.toFixed(1)} dni`;
             
             // Update predictability assessment
             const predictabilityText = assessPredictability(data, stats);
@@ -557,6 +703,132 @@
             });
         }
 
+        // Create Moving Ranges chart
+        function createMRChart(data, stats) {
+            if (!stats || data.length === 0 || !stats.movingRanges) return;
+
+            const movingRanges = stats.movingRanges;
+            const labels = data.slice(1).map(d => d.id); // Start from 2nd item since MR is between consecutive points
+            
+            // Create lines for mean, median, URL, LRL
+            const meanMRLine = Array(movingRanges.length).fill(stats.avgMovingRange);
+            const medianMRLine = Array(movingRanges.length).fill(stats.medianMR);
+            const urlLine = Array(movingRanges.length).fill(stats.url);
+            const lrlLine = Array(movingRanges.length).fill(stats.lrl);
+
+            // Destroy existing chart if it exists
+            if (mrChart) {
+                mrChart.destroy();
+            }
+
+            // Create chart
+            const ctx = document.getElementById('mrChart').getContext('2d');
+            mrChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: 'Moving Ranges',
+                            data: movingRanges,
+                            borderColor: '#9C27B0',
+                            backgroundColor: 'rgba(156, 39, 176, 0.1)',
+                            borderWidth: 2,
+                            pointRadius: 4,
+                            pointHoverRadius: 6,
+                            pointBackgroundColor: '#9C27B0',
+                            tension: 0
+                        },
+                        {
+                            label: 'Średnia MR (Mean)',
+                            data: meanMRLine,
+                            borderColor: '#4CAF50',
+                            borderWidth: 3,
+                            pointRadius: 0,
+                            fill: false,
+                            tension: 0
+                        },
+                        {
+                            label: 'Mediana MR (Median)',
+                            data: medianMRLine,
+                            borderColor: '#2196F3',
+                            borderWidth: 3,
+                            pointRadius: 0,
+                            fill: false,
+                            tension: 0
+                        },
+                        {
+                            label: 'URL (Upper Range Limit)',
+                            data: urlLine,
+                            borderColor: '#FF5722',
+                            borderWidth: 2,
+                            borderDash: [10, 5],
+                            pointRadius: 0,
+                            fill: false,
+                            tension: 0
+                        },
+                        {
+                            label: 'LRL (Lower Range Limit)',
+                            data: lrlLine,
+                            borderColor: '#FF9800',
+                            borderWidth: 2,
+                            borderDash: [10, 5],
+                            pointRadius: 0,
+                            fill: false,
+                            tension: 0
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'ID Zadania',
+                                font: {
+                                    size: 14,
+                                    weight: 'bold'
+                                }
+                            }
+                        },
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: 'Moving Range (dni)',
+                                font: {
+                                    size: 14,
+                                    weight: 'bold'
+                                }
+                            }
+                        }
+                    },
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: 'Moving Ranges Chart (mR Chart)',
+                            font: {
+                                size: 16
+                            }
+                        },
+                        legend: {
+                            display: true,
+                            position: 'top'
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return `${context.dataset.label}: ${context.parsed.y.toFixed(1)} dni`;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
         // Initialize on page load
         async function initialize() {
             try {
@@ -564,6 +836,7 @@
                 const stats = calculateStatistics(allData);
                 updateStatistics(allData, stats);
                 createChart(allData, stats);
+                createMRChart(allData, stats);
             } catch (error) {
                 console.error('Błąd podczas inicjalizacji:', error);
                 document.querySelector('.container').innerHTML += 
