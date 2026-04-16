@@ -322,12 +322,12 @@
                 <tr>
                     <td><strong>URL (Upper Range Limit)</strong></td>
                     <td id="table-url">-</td>
-                    <td>Górna granica zakresów ruchomych (Mean MR + 3.27 × Mean MR)</td>
+                    <td>Górna granica zakresów ruchomych (Mean MR × 4.27)</td>
                 </tr>
                 <tr>
                     <td><strong>LRL (Lower Range Limit)</strong></td>
                     <td id="table-lrl">-</td>
-                    <td>Dolna granica zakresów ruchomych (Mean MR - 3.27 × Mean MR)</td>
+                    <td>Dolna granica zakresów ruchomych (max(0, Mean MR × -2.27))</td>
                 </tr>
             </tbody>
         </table>
@@ -423,10 +423,10 @@
                 : 0;
             
             // URL and LRL for Moving Ranges chart
-            // Formula: URL = Mean MR + 3.27 × Mean MR
-            //          LRL = Mean MR - 3.27 × Mean MR
-            const url = avgMovingRange + (3.27 * avgMovingRange);
-            const lrl = Math.max(0, avgMovingRange - (3.27 * avgMovingRange)); // Can't be negative
+            // Formula: URL = Mean MR × 4.27 (derived from Mean MR + 3.27 × Mean MR)
+            //          LRL = Mean MR × -2.27 (derived from Mean MR - 3.27 × Mean MR), clamped to 0
+            const url = avgMovingRange * 4.27;
+            const lrl = Math.max(0, avgMovingRange * -2.27); // Can't be negative
             
             // Control limits for X chart (individuals chart)
             // Using E2 constant (2.66) for individuals chart with moving ranges
