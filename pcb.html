@@ -1,0 +1,578 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Process Control Behaviour - Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            background-color: #f5f5f5;
+        }
+        .nav {
+            background-color: #333;
+            overflow: hidden;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .nav a {
+            float: left;
+            display: block;
+            color: #f2f2f2;
+            text-align: center;
+            padding: 14px 20px;
+            text-decoration: none;
+            font-size: 16px;
+            transition: background-color 0.3s;
+        }
+        .nav a:hover {
+            background-color: #ddd;
+            color: black;
+        }
+        .nav a.active {
+            background-color: #007bff;
+            color: white;
+        }
+        .container {
+            max-width: 1400px;
+            margin: 20px auto;
+            background-color: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 10px;
+        }
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 30px;
+            font-style: italic;
+        }
+        .chart-container {
+            position: relative;
+            height: 500px;
+            margin-top: 30px;
+        }
+        .stats {
+            margin-top: 40px;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+        }
+        .stat-card {
+            background-color: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            border-left: 4px solid #007bff;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        .stat-label {
+            font-size: 13px;
+            color: #666;
+            text-transform: uppercase;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+        .stat-value {
+            font-size: 28px;
+            font-weight: bold;
+            color: #333;
+        }
+        .stat-unit {
+            font-size: 14px;
+            color: #666;
+            margin-left: 5px;
+        }
+        .legend {
+            margin-top: 20px;
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            flex-wrap: wrap;
+        }
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .legend-line {
+            width: 40px;
+            height: 3px;
+            border-radius: 2px;
+        }
+        .predictability-section {
+            margin-top: 30px;
+            padding: 20px;
+            background-color: #e7f3ff;
+            border-radius: 8px;
+            border-left: 4px solid #007bff;
+        }
+        .predictability-title {
+            font-size: 18px;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 10px;
+        }
+        .predictability-text {
+            font-size: 14px;
+            color: #555;
+            line-height: 1.6;
+        }
+        .error-message {
+            color: red;
+            text-align: center;
+            margin-top: 20px;
+            padding: 20px;
+            background-color: #ffebee;
+            border-radius: 5px;
+            border-left: 4px solid #f44336;
+        }
+    </style>
+</head>
+<body>
+    <div class="nav">
+        <a href="index.html">Histogram</a>
+        <a href="scatterplot.html">Scatterplot</a>
+        <a href="pcb.html" class="active">Process Control Behaviour</a>
+    </div>
+
+    <div class="container">
+        <h1>Process Control Behaviour (X Chart)</h1>
+        <div class="subtitle">Analiza przewidywalności procesu na podstawie czasów realizacji</div>
+        
+        <div class="legend">
+            <div class="legend-item">
+                <div class="legend-line" style="background-color: #2196F3;"></div>
+                <span>Czasy realizacji</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-line" style="background-color: #4CAF50;"></div>
+                <span>Średnia (Mean)</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-line" style="border: 2px dashed #FF9800; background-color: transparent;"></div>
+                <span>UNPL (Upper Natural Process Limit)</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-line" style="border: 2px dashed #FF9800; background-color: transparent;"></div>
+                <span>LNPL (Lower Natural Process Limit)</span>
+            </div>
+        </div>
+
+        <div class="chart-container">
+            <canvas id="pcbChart"></canvas>
+        </div>
+
+        <div class="predictability-section">
+            <div class="predictability-title">Ocena przewidywalności procesu</div>
+            <div class="predictability-text" id="predictabilityText">Ładowanie...</div>
+        </div>
+
+        <div class="stats">
+            <div class="stat-card">
+                <div class="stat-label">Czasy realizacji (Cycle Time)</div>
+                <div class="stat-value" id="meanCycleTime">-<span class="stat-unit">dni</span></div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Tempo dostarczania (Throughput)</div>
+                <div class="stat-value" id="throughput">-<span class="stat-unit">zadań/tydzień</span></div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Velocity</div>
+                <div class="stat-value" id="velocity">-<span class="stat-unit">zadań/tydzień</span></div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">WIP Age (Średni)</div>
+                <div class="stat-value" id="wipAge">-<span class="stat-unit">dni</span></div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Średnia (Mean)</div>
+                <div class="stat-value" id="mean">-<span class="stat-unit">dni</span></div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">UNPL</div>
+                <div class="stat-value" id="unpl">-<span class="stat-unit">dni</span></div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">LNPL</div>
+                <div class="stat-value" id="lnpl">-<span class="stat-unit">dni</span></div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Liczba zadań</div>
+                <div class="stat-value" id="taskCount">-</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Odchylenie standardowe</div>
+                <div class="stat-value" id="stdDev">-<span class="stat-unit">dni</span></div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Zakres kontrolny</div>
+                <div class="stat-value" id="controlRange">-<span class="stat-unit">dni</span></div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Min czas realizacji</div>
+                <div class="stat-value" id="minCycleTime">-<span class="stat-unit">dni</span></div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Max czas realizacji</div>
+                <div class="stat-value" id="maxCycleTime">-<span class="stat-unit">dni</span></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const CSV_FILENAME = '3. PCB Czas realizacji.csv';
+        
+        let chart = null;
+        let allData = [];
+
+        // Load CSV data
+        async function loadCSV() {
+            try {
+                const response = await fetch(CSV_FILENAME);
+                if (!response.ok) {
+                    throw new Error('Nie można załadować pliku CSV');
+                }
+                const text = await response.text();
+                const lines = text.trim().split('\n');
+                
+                const data = [];
+                for (let i = 1; i < lines.length; i++) {
+                    const line = lines[i].trim();
+                    if (!line) continue;
+                    
+                    const parts = line.split(';');
+                    if (parts.length >= 4) {
+                        const id = parseInt(parts[0].trim());
+                        const startedStr = parts[1].trim();
+                        const closedStr = parts[2].trim();
+                        const cycleTime = parseFloat(parts[3].trim());
+                        
+                        if (!isNaN(id) && !isNaN(cycleTime)) {
+                            data.push({ 
+                                id: id,
+                                started: startedStr,
+                                closed: closedStr,
+                                cycleTime: cycleTime
+                            });
+                        }
+                    }
+                }
+                
+                return data;
+            } catch (error) {
+                console.error('Błąd podczas wczytywania danych:', error);
+                alert(`Nie można załadować pliku danych CSV. Upewnij się, że plik "${CSV_FILENAME}" znajduje się w tym samym katalogu co pcb.html.`);
+                throw error;
+            }
+        }
+
+        // Calculate statistics
+        function calculateStatistics(data) {
+            if (data.length === 0) {
+                return null;
+            }
+
+            const cycleTimes = data.map(d => d.cycleTime);
+            const n = cycleTimes.length;
+            
+            // Mean (average)
+            const mean = cycleTimes.reduce((sum, val) => sum + val, 0) / n;
+            
+            // Standard deviation
+            const variance = cycleTimes.reduce((sum, val) => sum + Math.pow(val - mean, 2), 0) / n;
+            const stdDev = Math.sqrt(variance);
+            
+            // Moving range (for X chart control limits)
+            const movingRanges = [];
+            for (let i = 1; i < cycleTimes.length; i++) {
+                movingRanges.push(Math.abs(cycleTimes[i] - cycleTimes[i-1]));
+            }
+            
+            // Average moving range
+            const avgMovingRange = movingRanges.length > 0 
+                ? movingRanges.reduce((sum, val) => sum + val, 0) / movingRanges.length 
+                : 0;
+            
+            // Control limits for X chart (individuals chart)
+            // Using E2 constant (2.66) for individuals chart with moving ranges
+            const controlFactor = 2.66; // E2 constant for individuals chart
+            
+            // UNPL and LNPL using moving range method
+            const unpl = mean + (controlFactor * avgMovingRange);
+            const lnpl = Math.max(0, mean - (controlFactor * avgMovingRange)); // Can't be negative
+            
+            // Min and max
+            const minCycleTime = Math.min(...cycleTimes);
+            const maxCycleTime = Math.max(...cycleTimes);
+            
+            return {
+                mean: mean,
+                stdDev: stdDev,
+                unpl: unpl,
+                lnpl: lnpl,
+                avgMovingRange: avgMovingRange,
+                minCycleTime: minCycleTime,
+                maxCycleTime: maxCycleTime,
+                controlRange: unpl - lnpl
+            };
+        }
+
+        // Calculate throughput
+        function calculateThroughput(data) {
+            if (data.length === 0) return 0;
+            
+            // Parse dates to get the time range
+            // Date format in CSV is MM.DD.YYYY (e.g., 11.28.2023 = November 28, 2023)
+            const dates = data.map(d => {
+                const parts = d.closed.split('.');
+                if (parts.length === 3) {
+                    const month = parseInt(parts[0]);  // parts[0] = month
+                    const day = parseInt(parts[1]);    // parts[1] = day
+                    const year = parseInt(parts[2]);   // parts[2] = year
+                    return new Date(year, month - 1, day);
+                }
+                return null;
+            }).filter(d => d !== null);
+            
+            if (dates.length === 0) return 0;
+            
+            const minDate = new Date(Math.min(...dates));
+            const maxDate = new Date(Math.max(...dates));
+            
+            // Calculate weeks
+            const weeks = (maxDate - minDate) / (7 * 24 * 60 * 60 * 1000);
+            
+            // Throughput = tasks / weeks
+            return weeks > 0 ? data.length / weeks : 0;
+        }
+
+        // Calculate velocity (similar to throughput for this dataset)
+        function calculateVelocity(data) {
+            return calculateThroughput(data);
+        }
+
+        // Calculate WIP age
+        function calculateWIPAge(data) {
+            if (data.length === 0) return 0;
+            
+            // Average cycle time represents average WIP age
+            const cycleTimes = data.map(d => d.cycleTime);
+            return cycleTimes.reduce((sum, val) => sum + val, 0) / cycleTimes.length;
+        }
+
+        // Assess predictability
+        function assessPredictability(data, stats) {
+            if (!stats) return "Brak danych do oceny.";
+            
+            const cycleTimes = data.map(d => d.cycleTime);
+            
+            // Count points outside control limits
+            const outsideUNPL = cycleTimes.filter(ct => ct > stats.unpl).length;
+            const outsideLNPL = cycleTimes.filter(ct => ct < stats.lnpl).length;
+            const outsideLimits = outsideUNPL + outsideLNPL;
+            
+            const percentageOutside = (outsideLimits / cycleTimes.length) * 100;
+            
+            // Calculate coefficient of variation
+            const cv = (stats.stdDev / stats.mean) * 100;
+            
+            let assessment = "";
+            
+            if (percentageOutside <= 5) {
+                assessment += "✓ Proces jest <strong>przewidywalny</strong>. ";
+                assessment += `Tylko ${outsideLimits} punktów (${percentageOutside.toFixed(1)}%) wykracza poza granice naturalne procesu. `;
+            } else {
+                assessment += "⚠ Proces jest <strong>nieprzewidywalny</strong>. ";
+                assessment += `${outsideLimits} punktów (${percentageOutside.toFixed(1)}%) wykracza poza granice naturalne procesu. `;
+            }
+            
+            if (cv < 30) {
+                assessment += `Współczynnik zmienności (${cv.toFixed(1)}%) wskazuje na <strong>niską zmienność</strong>.`;
+            } else if (cv < 50) {
+                assessment += `Współczynnik zmienności (${cv.toFixed(1)}%) wskazuje na <strong>umiarkowaną zmienność</strong>.`;
+            } else {
+                assessment += `Współczynnik zmienności (${cv.toFixed(1)}%) wskazuje na <strong>wysoką zmienność</strong>.`;
+            }
+            
+            return assessment;
+        }
+
+        // Update statistics display
+        function updateStatistics(data, stats) {
+            if (!stats) {
+                return;
+            }
+
+            const throughput = calculateThroughput(data);
+            const velocity = calculateVelocity(data);
+            const wipAge = calculateWIPAge(data);
+            
+            document.getElementById('meanCycleTime').innerHTML = `${stats.mean.toFixed(1)}<span class="stat-unit">dni</span>`;
+            document.getElementById('throughput').innerHTML = `${throughput.toFixed(2)}<span class="stat-unit">zadań/tydzień</span>`;
+            document.getElementById('velocity').innerHTML = `${velocity.toFixed(2)}<span class="stat-unit">zadań/tydzień</span>`;
+            document.getElementById('wipAge').innerHTML = `${wipAge.toFixed(1)}<span class="stat-unit">dni</span>`;
+            document.getElementById('mean').innerHTML = `${stats.mean.toFixed(1)}<span class="stat-unit">dni</span>`;
+            document.getElementById('unpl').innerHTML = `${stats.unpl.toFixed(1)}<span class="stat-unit">dni</span>`;
+            document.getElementById('lnpl').innerHTML = `${stats.lnpl.toFixed(1)}<span class="stat-unit">dni</span>`;
+            document.getElementById('taskCount').textContent = data.length;
+            document.getElementById('stdDev').innerHTML = `${stats.stdDev.toFixed(1)}<span class="stat-unit">dni</span>`;
+            document.getElementById('controlRange').innerHTML = `${stats.controlRange.toFixed(1)}<span class="stat-unit">dni</span>`;
+            document.getElementById('minCycleTime').innerHTML = `${stats.minCycleTime}<span class="stat-unit">dni</span>`;
+            document.getElementById('maxCycleTime').innerHTML = `${stats.maxCycleTime}<span class="stat-unit">dni</span>`;
+            
+            // Update predictability assessment
+            const predictabilityText = assessPredictability(data, stats);
+            document.getElementById('predictabilityText').innerHTML = predictabilityText;
+        }
+
+        // Create chart
+        function createChart(data, stats) {
+            if (!stats || data.length === 0) return;
+
+            const cycleTimes = data.map(d => d.cycleTime);
+            const labels = data.map(d => d.id);
+            
+            // Create mean line data
+            const meanLine = Array(data.length).fill(stats.mean);
+            const unplLine = Array(data.length).fill(stats.unpl);
+            const lnplLine = Array(data.length).fill(stats.lnpl);
+
+            // Destroy existing chart if it exists
+            if (chart) {
+                chart.destroy();
+            }
+
+            // Create chart
+            const ctx = document.getElementById('pcbChart').getContext('2d');
+            chart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: 'Czasy realizacji',
+                            data: cycleTimes,
+                            borderColor: '#2196F3',
+                            backgroundColor: 'rgba(33, 150, 243, 0.1)',
+                            borderWidth: 2,
+                            pointRadius: 4,
+                            pointHoverRadius: 6,
+                            pointBackgroundColor: '#2196F3',
+                            tension: 0
+                        },
+                        {
+                            label: 'Średnia (Mean)',
+                            data: meanLine,
+                            borderColor: '#4CAF50',
+                            borderWidth: 3,
+                            pointRadius: 0,
+                            fill: false,
+                            tension: 0
+                        },
+                        {
+                            label: 'UNPL',
+                            data: unplLine,
+                            borderColor: '#FF9800',
+                            borderWidth: 2,
+                            borderDash: [10, 5],
+                            pointRadius: 0,
+                            fill: false,
+                            tension: 0
+                        },
+                        {
+                            label: 'LNPL',
+                            data: lnplLine,
+                            borderColor: '#FF9800',
+                            borderWidth: 2,
+                            borderDash: [10, 5],
+                            pointRadius: 0,
+                            fill: false,
+                            tension: 0
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'ID Zadania',
+                                font: {
+                                    size: 14,
+                                    weight: 'bold'
+                                }
+                            }
+                        },
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: 'Czas realizacji (dni)',
+                                font: {
+                                    size: 14,
+                                    weight: 'bold'
+                                }
+                            }
+                        }
+                    },
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: 'Process Control Behaviour - X Chart (Wykres Indywidualny)',
+                            font: {
+                                size: 16
+                            }
+                        },
+                        legend: {
+                            display: true,
+                            position: 'top'
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const dataIndex = context.dataIndex;
+                                    if (context.dataset.label === 'Czasy realizacji' && data[dataIndex]) {
+                                        const point = data[dataIndex];
+                                        return [
+                                            `ID: ${point.id}`,
+                                            `Started: ${point.started}`,
+                                            `Closed: ${point.closed}`,
+                                            `Cycle Time: ${point.cycleTime} dni`
+                                        ];
+                                    }
+                                    return `${context.dataset.label}: ${context.parsed.y.toFixed(1)} dni`;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Initialize on page load
+        async function initialize() {
+            try {
+                allData = await loadCSV();
+                const stats = calculateStatistics(allData);
+                updateStatistics(allData, stats);
+                createChart(allData, stats);
+            } catch (error) {
+                console.error('Błąd podczas inicjalizacji:', error);
+                document.querySelector('.container').innerHTML += 
+                    '<div class="error-message">Wystąpił błąd podczas ładowania danych. Sprawdź konsolę przeglądarki, aby uzyskać więcej informacji.</div>';
+            }
+        }
+
+        // Run after page load
+        initialize();
+    </script>
+</body>
+</html>
