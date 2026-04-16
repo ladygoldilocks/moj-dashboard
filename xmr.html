@@ -1,0 +1,805 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tempo dostarczania - XMR Chart</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.0.1/dist/chartjs-plugin-annotation.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            background-color: #f5f5f5;
+        }
+        .nav {
+            background-color: #333;
+            overflow: hidden;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .nav a {
+            float: left;
+            display: block;
+            color: #f2f2f2;
+            text-align: center;
+            padding: 14px 20px;
+            text-decoration: none;
+            font-size: 16px;
+            transition: background-color 0.3s;
+        }
+        .nav a:hover {
+            background-color: #ddd;
+            color: black;
+        }
+        .nav a.active {
+            background-color: #007bff;
+            color: white;
+        }
+        .container {
+            max-width: 1400px;
+            margin: 20px auto;
+            background-color: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 10px;
+        }
+        .subtitle {
+            color: #666;
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 16px;
+        }
+        .chart-container {
+            position: relative;
+            height: 500px;
+            margin-bottom: 50px;
+        }
+        .signal-counters {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 30px;
+            margin-bottom: 30px;
+        }
+        .counter-box {
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+        .counter-box.strong {
+            background-color: #ffebee;
+            border-left: 4px solid #f44336;
+        }
+        .counter-box.moderate {
+            background-color: #fff3e0;
+            border-left: 4px solid #ff9800;
+        }
+        .counter-box.weak {
+            background-color: #fffde7;
+            border-left: 4px solid #ffd54f;
+        }
+        .counter-box.persistent {
+            background-color: #f5f5f5;
+            border-left: 4px solid #9e9e9e;
+        }
+        .counter-box h3 {
+            margin: 0 0 10px 0;
+            font-size: 18px;
+            color: #333;
+        }
+        .counter-box .count {
+            font-size: 36px;
+            font-weight: bold;
+            color: #333;
+        }
+        .stats-table {
+            margin-top: 40px;
+            width: 100%;
+            border-collapse: collapse;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .stats-table th {
+            background-color: #007bff;
+            color: white;
+            padding: 12px;
+            text-align: left;
+            font-weight: 600;
+        }
+        .stats-table td {
+            padding: 12px;
+            border-bottom: 1px solid #ddd;
+        }
+        .stats-table tr:hover {
+            background-color: #f5f5f5;
+        }
+        .table-section-title {
+            margin-top: 50px;
+            font-size: 22px;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="nav">
+        <a href="index.html">Histogram</a>
+        <a href="scatterplot.html">Scatterplot</a>
+        <a href="pcb.html">Process Control Behaviour</a>
+        <a href="xmr.html" class="active">Tempo dostarczania</a>
+    </div>
+
+    <div class="container">
+        <h1>Tempo dostarczania (XMR Chart)</h1>
+        <div class="subtitle">Tygodniowa agregacja przepustowości procesu</div>
+        
+        <div class="chart-container">
+            <canvas id="xmrChart"></canvas>
+        </div>
+
+        <h2 style="text-align: center; margin-top: 40px; color: #333;">Liczniki sygnałów</h2>
+        <div class="signal-counters">
+            <div class="counter-box strong">
+                <h3>Silny sygnał ❗</h3>
+                <div class="count" id="strong-count">0</div>
+                <p>Punkt poza UNPL/LNPL</p>
+            </div>
+            <div class="counter-box moderate">
+                <h3>Umiarkowany sygnał ❗</h3>
+                <div class="count" id="moderate-count">0</div>
+                <p>2 z 3 poza 2/3 UNPL/LNPL</p>
+            </div>
+            <div class="counter-box weak">
+                <h3>Słaby sygnał ❓</h3>
+                <div class="count" id="weak-count">0</div>
+                <p>3 z 5 poza 1/3 UNPL/LNPL</p>
+            </div>
+            <div class="counter-box persistent">
+                <h3>Trwała zmiana ❓</h3>
+                <div class="count" id="persistent-count">0</div>
+                <p>8 kolejnych po 1 stronie mediany</p>
+            </div>
+        </div>
+
+        <div class="table-section-title">Statystyki procesu</div>
+        <table class="stats-table">
+            <thead>
+                <tr>
+                    <th>Miara</th>
+                    <th>Wartość</th>
+                    <th>Opis</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>Średnia (Mean)</strong></td>
+                    <td id="table-mean">-</td>
+                    <td>Średnia przepustowość tygodniowa</td>
+                </tr>
+                <tr>
+                    <td><strong>Mediana</strong></td>
+                    <td id="table-median">-</td>
+                    <td>Wartość środkowa przepustowości</td>
+                </tr>
+                <tr>
+                    <td><strong>UNPL</strong></td>
+                    <td id="table-unpl">-</td>
+                    <td>Górna naturalna granica procesu (Mediana + 2.66 × Mediana)</td>
+                </tr>
+                <tr>
+                    <td><strong>LNPL</strong></td>
+                    <td id="table-lnpl">-</td>
+                    <td>Dolna naturalna granica procesu (Mediana - 2.66 × Mediana)</td>
+                </tr>
+                <tr>
+                    <td><strong>2/3 UNPL</strong></td>
+                    <td id="table-unpl-23">-</td>
+                    <td>2/3 górnej granicy procesu</td>
+                </tr>
+                <tr>
+                    <td><strong>2/3 LNPL</strong></td>
+                    <td id="table-lnpl-23">-</td>
+                    <td>2/3 dolnej granicy procesu</td>
+                </tr>
+                <tr>
+                    <td><strong>1/3 UNPL</strong></td>
+                    <td id="table-unpl-13">-</td>
+                    <td>1/3 górnej granicy procesu</td>
+                </tr>
+                <tr>
+                    <td><strong>1/3 LNPL</strong></td>
+                    <td id="table-lnpl-13">-</td>
+                    <td>1/3 dolnej granicy procesu</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <script>
+        const CSV_FILENAME = '4. Tempo dostarczania dzienne.csv';
+        const E2_CONSTANT = 2.66;
+        const BRACKET_Y_OFFSET_MULTIPLIER = 1.15; // Position brackets 15% above the max value
+        
+        let chart = null;
+        let allData = [];
+
+        // Polish holidays for 2024 (including weekends are handled separately)
+        const polishHolidays2024 = [
+            '01.01.2024', // Nowy Rok
+            '01.06.2024', // Trzech Króli
+            '03.31.2024', // Wielkanoc
+            '04.01.2024', // Poniedziałek Wielkanocny
+            '05.01.2024', // Święto Pracy
+            '05.03.2024', // Święto Konstytucji 3 Maja
+            '05.19.2024', // Zielone Świątki
+            '05.30.2024', // Boże Ciało
+            '08.15.2024', // Wniebowzięcie NMP
+            '11.01.2024', // Wszystkich Świętych
+            '11.11.2024', // Niepodległości
+            '12.25.2024', // Boże Narodzenie
+            '12.26.2024'  // Drugi dzień Bożego Narodzenia
+        ];
+
+        // Parse date in DD.MM.YYYY format
+        function parseDate(dateStr) {
+            const parts = dateStr.split('.');
+            if (parts.length === 3) {
+                const day = parseInt(parts[0]);
+                const month = parseInt(parts[1]) - 1; // Month is 0-indexed
+                const year = parseInt(parts[2]);
+                return new Date(year, month, day);
+            }
+            return null;
+        }
+
+        // Check if date is weekend
+        function isWeekend(date) {
+            const day = date.getDay();
+            return day === 0 || day === 6; // Sunday or Saturday
+        }
+
+        // Check if date is Polish holiday
+        function isPolishHoliday(dateStr) {
+            return polishHolidays2024.includes(dateStr);
+        }
+
+        // Load CSV data
+        async function loadCSV() {
+            try {
+                const response = await fetch(CSV_FILENAME);
+                if (!response.ok) {
+                    throw new Error('Nie można załadować pliku CSV');
+                }
+                const text = await response.text();
+                const lines = text.trim().split('\n');
+                
+                const data = [];
+                for (let i = 1; i < lines.length; i++) {
+                    const line = lines[i].trim();
+                    if (!line) continue;
+                    
+                    const parts = line.split(';');
+                    if (parts.length >= 2) {
+                        const dateStr = parts[0].trim();
+                        const throughput = parseFloat(parts[1].trim());
+                        
+                        if (!isNaN(throughput)) {
+                            const date = parseDate(dateStr);
+                            if (date) {
+                                data.push({ 
+                                    dateStr: dateStr,
+                                    date: date,
+                                    throughput: throughput
+                                });
+                            }
+                        }
+                    }
+                }
+                
+                return data;
+            } catch (error) {
+                console.error('Błąd podczas wczytywania danych:', error);
+                alert(`Nie można załadować pliku danych CSV. Upewnij się, że plik "${CSV_FILENAME}" znajduje się w tym samym katalogu.`);
+                throw error;
+            }
+        }
+
+        // Get ISO week number
+        function getISOWeek(date) {
+            const target = new Date(date.valueOf());
+            const dayNr = (date.getDay() + 6) % 7;
+            target.setDate(target.getDate() - dayNr + 3);
+            const firstThursday = target.valueOf();
+            target.setMonth(0, 1);
+            if (target.getDay() !== 4) {
+                target.setMonth(0, 1 + ((4 - target.getDay()) + 7) % 7);
+            }
+            return 1 + Math.ceil((firstThursday - target) / 604800000);
+        }
+
+        // Aggregate data weekly, excluding weekends and holidays with 0 throughput
+        function aggregateWeekly(data) {
+            const weeklyData = {};
+            
+            data.forEach(item => {
+                // Skip weekends and holidays if throughput is 0
+                if (item.throughput === 0 && (isWeekend(item.date) || isPolishHoliday(item.dateStr))) {
+                    return;
+                }
+                
+                const year = item.date.getFullYear();
+                const week = getISOWeek(item.date);
+                const key = `${year}-W${String(week).padStart(2, '0')}`;
+                
+                if (!weeklyData[key]) {
+                    weeklyData[key] = {
+                        key: key,
+                        year: year,
+                        week: week,
+                        sum: 0,
+                        count: 0
+                    };
+                }
+                
+                weeklyData[key].sum += item.throughput;
+                weeklyData[key].count += 1;
+            });
+            
+            // Convert to array and calculate averages
+            const result = Object.values(weeklyData)
+                .map(w => ({
+                    label: w.key,
+                    value: w.sum / w.count,
+                    year: w.year,
+                    week: w.week
+                }))
+                .sort((a, b) => {
+                    if (a.year !== b.year) return a.year - b.year;
+                    return a.week - b.week;
+                });
+            
+            return result;
+        }
+
+        // Calculate statistics
+        function calculateStatistics(values) {
+            if (values.length === 0) {
+                return null;
+            }
+
+            const n = values.length;
+            
+            // Mean
+            const mean = values.reduce((sum, val) => sum + val, 0) / n;
+            
+            // Median
+            const sorted = [...values].sort((a, b) => a - b);
+            const median = sorted.length % 2 === 0
+                ? (sorted[sorted.length / 2 - 1] + sorted[sorted.length / 2]) / 2
+                : sorted[Math.floor(sorted.length / 2)];
+            
+            // UNPL and LNPL based on XMR chart formula: median +/- E2 * median
+            // Using E2 constant (2.66) as specified in requirements for XMR charts
+            const unpl = median + (E2_CONSTANT * median);
+            const lnpl = Math.max(0, median - (E2_CONSTANT * median));
+            
+            // Calculate 2/3 and 1/3 limits
+            const range_unpl = unpl - median;
+            const range_lnpl = median - lnpl;
+            
+            const unpl_23 = median + (2/3) * range_unpl;
+            const lnpl_23 = median - (2/3) * range_lnpl;
+            
+            const unpl_13 = median + (1/3) * range_unpl;
+            const lnpl_13 = median - (1/3) * range_lnpl;
+            
+            return {
+                mean: mean,
+                median: median,
+                unpl: unpl,
+                lnpl: lnpl,
+                unpl_23: unpl_23,
+                lnpl_23: lnpl_23,
+                unpl_13: unpl_13,
+                lnpl_13: lnpl_13
+            };
+        }
+
+        // Detect signals
+        function detectSignals(values, stats) {
+            const signals = {
+                strong: [],
+                moderate: [],
+                weak: [],
+                persistent: []
+            };
+            
+            // 1. Strong signal - any point outside UNPL or LNPL
+            values.forEach((val, idx) => {
+                if (val > stats.unpl || val < stats.lnpl) {
+                    signals.strong.push(idx);
+                }
+            });
+            
+            // 2. Moderate signal - 2 of 3 consecutive points outside 2/3 limits
+            for (let i = 0; i <= values.length - 3; i++) {
+                let outsideCount = 0;
+                const indices = [i, i+1, i+2];
+                
+                indices.forEach(idx => {
+                    const val = values[idx];
+                    if (val > stats.unpl_23 || val < stats.lnpl_23) {
+                        outsideCount++;
+                    }
+                });
+                
+                if (outsideCount >= 2) {
+                    // Store the start index and count (3 points)
+                    signals.moderate.push({start: i, count: 3});
+                }
+            }
+            
+            // 3. Weak signal - 3 of 5 consecutive points outside 1/3 limits
+            for (let i = 0; i <= values.length - 5; i++) {
+                let outsideCount = 0;
+                const indices = [i, i+1, i+2, i+3, i+4];
+                
+                indices.forEach(idx => {
+                    const val = values[idx];
+                    if (val > stats.unpl_13 || val < stats.lnpl_13) {
+                        outsideCount++;
+                    }
+                });
+                
+                if (outsideCount >= 3) {
+                    signals.weak.push({start: i, count: 5});
+                }
+            }
+            
+            // 4. Persistent change - 8 consecutive points on one side of median
+            for (let i = 0; i <= values.length - 8; i++) {
+                const indices = [i, i+1, i+2, i+3, i+4, i+5, i+6, i+7];
+                const allAbove = indices.every(idx => values[idx] > stats.median);
+                const allBelow = indices.every(idx => values[idx] < stats.median);
+                
+                if (allAbove || allBelow) {
+                    signals.persistent.push({start: i, count: 8});
+                }
+            }
+            
+            return signals;
+        }
+
+        // Create chart with annotations
+        function createChart(weeklyData, stats, signals) {
+            const ctx = document.getElementById('xmrChart').getContext('2d');
+            
+            const labels = weeklyData.map(d => d.label);
+            const values = weeklyData.map(d => d.value);
+            
+            // Point colors and styles for strong signals
+            const pointBackgroundColors = values.map((val, idx) => {
+                if (signals.strong.includes(idx)) {
+                    return '#f44336'; // Red for strong signals
+                }
+                return '#2196F3'; // Blue default
+            });
+            
+            const pointRadius = values.map((val, idx) => {
+                if (signals.strong.includes(idx)) {
+                    return 6; // Larger for signals
+                }
+                return 3;
+            });
+            
+            // Create annotations for brackets and symbols
+            const annotations = {};
+            
+            // Add strong signal markers (red exclamation marks)
+            signals.strong.forEach((idx, sigIdx) => {
+                annotations[`strong-${sigIdx}`] = {
+                    type: 'label',
+                    xValue: idx,
+                    yValue: values[idx],
+                    yAdjust: -20,
+                    content: '❗',
+                    color: '#f44336',
+                    font: {
+                        size: 20
+                    }
+                };
+            });
+            
+            // Add moderate signal markers (orange brackets)
+            signals.moderate.forEach((sig, sigIdx) => {
+                const startIdx = sig.start;
+                const endIdx = sig.start + sig.count - 1;
+                const maxVal = Math.max(...values.slice(startIdx, endIdx + 1));
+                
+                // Orange exclamation mark
+                annotations[`moderate-mark-${sigIdx}`] = {
+                    type: 'label',
+                    xValue: startIdx + 1, // Middle point
+                    yValue: maxVal,
+                    yAdjust: -35,
+                    content: '❗',
+                    color: '#ff9800',
+                    font: {
+                        size: 18
+                    }
+                };
+                
+                // Orange bracket (using line)
+                annotations[`moderate-bracket-${sigIdx}`] = {
+                    type: 'line',
+                    xMin: startIdx,
+                    xMax: endIdx,
+                    yMin: maxVal * BRACKET_Y_OFFSET_MULTIPLIER,
+                    yMax: maxVal * BRACKET_Y_OFFSET_MULTIPLIER,
+                    borderColor: '#ff9800',
+                    borderWidth: 2
+                };
+            });
+            
+            // Add weak signal markers (yellow brackets)
+            signals.weak.forEach((sig, sigIdx) => {
+                const startIdx = sig.start;
+                const endIdx = sig.start + sig.count - 1;
+                const maxVal = Math.max(...values.slice(startIdx, endIdx + 1));
+                
+                // Yellow question mark
+                annotations[`weak-mark-${sigIdx}`] = {
+                    type: 'label',
+                    xValue: startIdx + 2, // Middle point
+                    yValue: maxVal,
+                    yAdjust: -35,
+                    content: '❓',
+                    color: '#ffd54f',
+                    font: {
+                        size: 18
+                    }
+                };
+                
+                // Yellow bracket
+                annotations[`weak-bracket-${sigIdx}`] = {
+                    type: 'line',
+                    xMin: startIdx,
+                    xMax: endIdx,
+                    yMin: maxVal * BRACKET_Y_OFFSET_MULTIPLIER,
+                    yMax: maxVal * BRACKET_Y_OFFSET_MULTIPLIER,
+                    borderColor: '#ffd54f',
+                    borderWidth: 2
+                };
+            });
+            
+            // Add persistent change markers (gray brackets)
+            signals.persistent.forEach((sig, sigIdx) => {
+                const startIdx = sig.start;
+                const endIdx = sig.start + sig.count - 1;
+                const maxVal = Math.max(...values.slice(startIdx, endIdx + 1));
+                
+                // Gray question mark
+                annotations[`persistent-mark-${sigIdx}`] = {
+                    type: 'label',
+                    xValue: startIdx + 3.5, // Middle point
+                    yValue: maxVal,
+                    yAdjust: -35,
+                    content: '❓',
+                    color: '#9e9e9e',
+                    font: {
+                        size: 18
+                    }
+                };
+                
+                // Gray bracket
+                annotations[`persistent-bracket-${sigIdx}`] = {
+                    type: 'line',
+                    xMin: startIdx,
+                    xMax: endIdx,
+                    yMin: maxVal * BRACKET_Y_OFFSET_MULTIPLIER,
+                    yMax: maxVal * BRACKET_Y_OFFSET_MULTIPLIER,
+                    borderColor: '#9e9e9e',
+                    borderWidth: 2
+                };
+            });
+            
+            if (chart) {
+                chart.destroy();
+            }
+            
+            chart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: 'Przepustowość tygodniowa',
+                            data: values,
+                            borderColor: '#2196F3',
+                            backgroundColor: 'rgba(33, 150, 243, 0.1)',
+                            pointBackgroundColor: pointBackgroundColors,
+                            pointRadius: pointRadius,
+                            pointHoverRadius: 7,
+                            fill: false,
+                            tension: 0.1,
+                            order: 1
+                        },
+                        {
+                            label: 'Średnia',
+                            data: Array(values.length).fill(stats.mean),
+                            borderColor: '#4CAF50',
+                            borderWidth: 2,
+                            borderDash: [5, 5],
+                            pointRadius: 0,
+                            fill: false,
+                            order: 2
+                        },
+                        {
+                            label: 'Mediana',
+                            data: Array(values.length).fill(stats.median),
+                            borderColor: '#9C27B0',
+                            borderWidth: 2,
+                            pointRadius: 0,
+                            fill: false,
+                            order: 2
+                        },
+                        {
+                            label: 'UNPL',
+                            data: Array(values.length).fill(stats.unpl),
+                            borderColor: '#f44336',
+                            borderWidth: 2,
+                            borderDash: [10, 5],
+                            pointRadius: 0,
+                            fill: false,
+                            order: 3
+                        },
+                        {
+                            label: 'LNPL',
+                            data: Array(values.length).fill(stats.lnpl),
+                            borderColor: '#f44336',
+                            borderWidth: 2,
+                            borderDash: [10, 5],
+                            pointRadius: 0,
+                            fill: false,
+                            order: 3
+                        },
+                        {
+                            label: '2/3 UNPL',
+                            data: Array(values.length).fill(stats.unpl_23),
+                            borderColor: '#ff9800',
+                            borderWidth: 1.5,
+                            borderDash: [5, 3],
+                            pointRadius: 0,
+                            fill: false,
+                            order: 4
+                        },
+                        {
+                            label: '2/3 LNPL',
+                            data: Array(values.length).fill(stats.lnpl_23),
+                            borderColor: '#ff9800',
+                            borderWidth: 1.5,
+                            borderDash: [5, 3],
+                            pointRadius: 0,
+                            fill: false,
+                            order: 4
+                        },
+                        {
+                            label: '1/3 UNPL',
+                            data: Array(values.length).fill(stats.unpl_13),
+                            borderColor: '#ffd54f',
+                            borderWidth: 1,
+                            borderDash: [3, 2],
+                            pointRadius: 0,
+                            fill: false,
+                            order: 5
+                        },
+                        {
+                            label: '1/3 LNPL',
+                            data: Array(values.length).fill(stats.lnpl_13),
+                            borderColor: '#ffd54f',
+                            borderWidth: 1,
+                            borderDash: [3, 2],
+                            pointRadius: 0,
+                            fill: false,
+                            order: 5
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: true,
+                            position: 'top'
+                        },
+                        tooltip: {
+                            mode: 'index',
+                            intersect: false,
+                            callbacks: {
+                                label: function(context) {
+                                    let label = context.dataset.label || '';
+                                    if (label) {
+                                        label += ': ';
+                                    }
+                                    if (context.parsed.y !== null) {
+                                        label += context.parsed.y.toFixed(2);
+                                    }
+                                    return label;
+                                }
+                            }
+                        },
+                        annotation: {
+                            annotations: annotations
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: 'Przepustowość (średnia tygodniowa)'
+                            }
+                        },
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'Tydzień'
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Update statistics table
+        function updateStatsTable(stats) {
+            document.getElementById('table-mean').textContent = stats.mean.toFixed(2);
+            document.getElementById('table-median').textContent = stats.median.toFixed(2);
+            document.getElementById('table-unpl').textContent = stats.unpl.toFixed(2);
+            document.getElementById('table-lnpl').textContent = stats.lnpl.toFixed(2);
+            document.getElementById('table-unpl-23').textContent = stats.unpl_23.toFixed(2);
+            document.getElementById('table-lnpl-23').textContent = stats.lnpl_23.toFixed(2);
+            document.getElementById('table-unpl-13').textContent = stats.unpl_13.toFixed(2);
+            document.getElementById('table-lnpl-13').textContent = stats.lnpl_13.toFixed(2);
+        }
+
+        // Update signal counters
+        function updateSignalCounters(signals) {
+            document.getElementById('strong-count').textContent = signals.strong.length;
+            document.getElementById('moderate-count').textContent = signals.moderate.length;
+            document.getElementById('weak-count').textContent = signals.weak.length;
+            document.getElementById('persistent-count').textContent = signals.persistent.length;
+        }
+
+        // Initialize
+        async function init() {
+            try {
+                const data = await loadCSV();
+                allData = data;
+                
+                const weeklyData = aggregateWeekly(data);
+                const values = weeklyData.map(d => d.value);
+                const stats = calculateStatistics(values);
+                const signals = detectSignals(values, stats);
+                
+                createChart(weeklyData, stats, signals);
+                updateStatsTable(stats);
+                updateSignalCounters(signals);
+                
+            } catch (error) {
+                console.error('Błąd inicjalizacji:', error);
+            }
+        }
+
+        // Load on page load
+        window.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>
