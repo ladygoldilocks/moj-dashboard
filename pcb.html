@@ -199,23 +199,23 @@
         <div class="legend" style="margin-top: 50px;">
             <div class="legend-item">
                 <div class="legend-line" style="background-color: #9C27B0;"></div>
-                <span>Moving Ranges</span>
+                <span>Zakresy ruchome (Moving Ranges)</span>
             </div>
             <div class="legend-item">
                 <div class="legend-line" style="background-color: #4CAF50;"></div>
-                <span>Średnia MR (Mean)</span>
+                <span>Średnia MR</span>
             </div>
             <div class="legend-item">
                 <div class="legend-line" style="background-color: #2196F3;"></div>
-                <span>Mediana MR (Median)</span>
+                <span>Mediana MR</span>
             </div>
             <div class="legend-item">
                 <div class="legend-line" style="border: 2px dashed #FF5722; background-color: transparent;"></div>
-                <span>URL (Upper Range Limit)</span>
+                <span>URL (Górna granica zakresu)</span>
             </div>
             <div class="legend-item">
                 <div class="legend-line" style="border: 2px dashed #FF9800; background-color: transparent;"></div>
-                <span>LRL (Lower Range Limit)</span>
+                <span>LRL (Dolna granica zakresu)</span>
             </div>
         </div>
 
@@ -336,6 +336,10 @@
     <script>
         const CSV_FILENAME = '3. PCB Czas realizacji.csv';
         
+        // Statistical constants for control charts
+        const E2_CONSTANT = 2.66;  // E2 constant for individuals chart with moving ranges (X chart)
+        const URL_LRL_COEFFICIENT = 3.27;  // Coefficient for Moving Ranges chart control limits
+        
         let chart = null;
         let mrChart = null;
         let allData = [];
@@ -423,19 +427,16 @@
                 : 0;
             
             // URL and LRL for Moving Ranges chart
-            // URL = Mean MR + 3.27 × Mean MR = Mean MR × (1 + 3.27) = Mean MR × 4.27
-            // LRL = Mean MR - 3.27 × Mean MR = Mean MR × (1 - 3.27) = Mean MR × (-2.27), clamped to 0
-            // Note: LRL will typically be 0 since 1 - 3.27 = -2.27 (negative)
-            const url = avgMovingRange * 4.27;
-            const lrl = Math.max(0, avgMovingRange * (1 - 3.27)); // Can't be negative
+            // URL = Mean MR + URL_LRL_COEFFICIENT × Mean MR = Mean MR × (1 + URL_LRL_COEFFICIENT)
+            // LRL = Mean MR - URL_LRL_COEFFICIENT × Mean MR = Mean MR × (1 - URL_LRL_COEFFICIENT)
+            // Note: LRL will typically be 0 since (1 - 3.27) is negative
+            const url = avgMovingRange * (1 + URL_LRL_COEFFICIENT);
+            const lrl = Math.max(0, avgMovingRange * (1 - URL_LRL_COEFFICIENT)); // Can't be negative
             
             // Control limits for X chart (individuals chart)
-            // Using E2 constant (2.66) for individuals chart with moving ranges
-            const controlFactor = 2.66; // E2 constant for individuals chart
-            
-            // UNPL and LNPL using moving range method
-            const unpl = mean + (controlFactor * avgMovingRange);
-            const lnpl = Math.max(0, mean - (controlFactor * avgMovingRange)); // Can't be negative
+            // Using E2 constant for individuals chart with moving ranges
+            const unpl = mean + (E2_CONSTANT * avgMovingRange);
+            const lnpl = Math.max(0, mean - (E2_CONSTANT * avgMovingRange)); // Can't be negative
             
             // Min and max
             const minCycleTime = Math.min(...cycleTimes);
