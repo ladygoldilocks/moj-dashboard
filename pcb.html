@@ -155,11 +155,11 @@
                 <span>Średnia (Mean)</span>
             </div>
             <div class="legend-item">
-                <div class="legend-line" style="background-color: #FF9800; border: 2px dashed #FF9800; background-color: transparent;"></div>
+                <div class="legend-line" style="border: 2px dashed #FF9800; background-color: transparent;"></div>
                 <span>UNPL (Upper Natural Process Limit)</span>
             </div>
             <div class="legend-item">
-                <div class="legend-line" style="background-color: #FF9800; border: 2px dashed #FF9800; background-color: transparent;"></div>
+                <div class="legend-line" style="border: 2px dashed #FF9800; background-color: transparent;"></div>
                 <span>LNPL (Lower Natural Process Limit)</span>
             </div>
         </div>
@@ -300,8 +300,7 @@
                 : 0;
             
             // Control limits for X chart (individuals chart)
-            // Using constant 2.66 for individuals chart (d2 constant)
-            const d2 = 1.128; // For n=2 (moving range of 2)
+            // Using E2 constant (2.66) for individuals chart with moving ranges
             const controlFactor = 2.66; // E2 constant for individuals chart
             
             // UNPL and LNPL using moving range method
@@ -329,12 +328,13 @@
             if (data.length === 0) return 0;
             
             // Parse dates to get the time range
+            // Date format in CSV is MM.DD.YYYY (e.g., 11.28.2023 = November 28, 2023)
             const dates = data.map(d => {
                 const parts = d.closed.split('.');
                 if (parts.length === 3) {
-                    const month = parseInt(parts[0]);
-                    const day = parseInt(parts[1]);
-                    const year = parseInt(parts[2]);
+                    const month = parseInt(parts[0]);  // parts[0] = month
+                    const day = parseInt(parts[1]);    // parts[1] = day
+                    const year = parseInt(parts[2]);   // parts[2] = year
                     return new Date(year, month - 1, day);
                 }
                 return null;
