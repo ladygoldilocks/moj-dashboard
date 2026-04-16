@@ -751,28 +751,25 @@
             container.innerHTML = html;
         }
 
-        // Get monthly capacity values
-        function getMonthlyCapacities() {
+        // Get monthly capacity values as a Map for efficient lookups
+        function getMonthlyCapacitiesMap() {
             const startDate = document.getElementById('startDate').value;
             const targetDate = document.getElementById('targetDate').value;
             
-            if (!startDate || !targetDate) return [];
+            if (!startDate || !targetDate) return new Map();
             
             const startDateObj = new Date(startDate);
             const targetDateObj = new Date(targetDate);
             const months = getMonthsBetweenDates(startDateObj, targetDateObj);
             
-            const capacities = [];
+            const capacityMap = new Map();
             months.forEach(month => {
                 const monthKey = `${month.year}-${month.month}`;
                 const selectedRadio = document.querySelector(`input[name="capacity_${monthKey}"]:checked`);
-                capacities.push({
-                    month: month,
-                    capacity: selectedRadio ? parseInt(selectedRadio.value) : 100
-                });
+                capacityMap.set(monthKey, selectedRadio ? parseInt(selectedRadio.value) : 100);
             });
             
-            return capacities;
+            return capacityMap;
         }
 
         // Handle CSV upload
@@ -865,7 +862,7 @@
         }
 
         // Monte Carlo simulation with monthly capacity
-        function runMonteCarloSimulation(targetItems, throughput, teamFocus, startDate, monthlyCapacities, sprintLength) {
+        function runMonteCarloSimulation(targetItems, throughput, teamFocus, startDate, monthlyCapacitiesMap, sprintLength) {
             const numSimulations = 10000;
             const results = [];
             
@@ -875,13 +872,9 @@
                 let currentDate = new Date(startDate);
                 
                 while (itemsCompleted < targetItems) {
-                    // Get capacity for current month
-                    const currentMonth = currentDate.getMonth();
-                    const currentYear = currentDate.getFullYear();
-                    const monthCapacity = monthlyCapacities.find(mc => 
-                        mc.month.month === currentMonth && mc.month.year === currentYear
-                    );
-                    const capacity = monthCapacity ? monthCapacity.capacity : 100;
+                    // Get capacity for current month using Map for O(1) lookup
+                    const monthKey = `${currentDate.getFullYear()}-${currentDate.getMonth()}`;
+                    const capacity = monthlyCapacitiesMap.get(monthKey) || 100;
                     
                     // Apply team focus and capacity adjustments
                     const randomIndex = Math.floor(Math.random() * throughput.length);
@@ -922,7 +915,7 @@
         }
 
         // Calculate probability of delivery by target date with monthly capacity
-        function calculateProbabilityByDate(startDate, targetDate, totalItems, throughput, teamFocus, monthlyCapacities, sprintLength) {
+        function calculateProbabilityByDate(startDate, targetDate, totalItems, throughput, teamFocus, monthlyCapacitiesMap, sprintLength) {
             const numSimulations = 10000;
             let successCount = 0;
             
@@ -931,13 +924,9 @@
                 let currentDate = new Date(startDate);
                 
                 while (currentDate <= targetDate && itemsCompleted < totalItems) {
-                    // Get capacity for current month
-                    const currentMonth = currentDate.getMonth();
-                    const currentYear = currentDate.getFullYear();
-                    const monthCapacity = monthlyCapacities.find(mc => 
-                        mc.month.month === currentMonth && mc.month.year === currentYear
-                    );
-                    const capacity = monthCapacity ? monthCapacity.capacity : 100;
+                    // Get capacity for current month using Map for O(1) lookup
+                    const monthKey = `${currentDate.getFullYear()}-${currentDate.getMonth()}`;
+                    const capacity = monthlyCapacitiesMap.get(monthKey) || 100;
                     
                     // Apply team focus and capacity adjustments
                     const randomIndex = Math.floor(Math.random() * throughput.length);
@@ -1006,14 +995,14 @@
             }
 
             const teamFocus = parseInt(document.getElementById('teamFocus').value);
-            const monthlyCapacities = getMonthlyCapacities();
+            const monthlyCapacitiesMap = getMonthlyCapacitiesMap();
             const sprintLength = parseInt(document.querySelector('input[name="sprintLength"]:checked').value);
 
             // Calculate total items (average of min and max for each epic)
             const totalItems = epics.reduce((sum, epic) => sum + (epic.min + epic.max) / 2, 0);
 
             // Run Monte Carlo simulation
-            const simulationResults = runMonteCarloSimulation(totalItems, throughput, teamFocus, startDateObj, monthlyCapacities, sprintLength);
+            const simulationResults = runMonteCarloSimulation(totalItems, throughput, teamFocus, startDateObj, monthlyCapacitiesMap, sprintLength);
 
             // Calculate percentiles
             const p85 = getPercentile(simulationResults, 85);
@@ -1026,7 +1015,7 @@
             const p50Date = getDateFromSprints(startDateObj, p50, sprintLength);
 
             // Calculate probability of delivery by target date
-            const probability = calculateProbabilityByDate(startDateObj, targetDateObj, totalItems, throughput, teamFocus, monthlyCapacities, sprintLength);
+            const probability = calculateProbabilityByDate(startDateObj, targetDateObj, totalItems, throughput, teamFocus, monthlyCapacitiesMap, sprintLength);
 
             // Display results
             displayResults(simulationResults, p85, p95, p50, p85Date, p95Date, p50Date, probability, totalItems, formatDate(targetDateObj));
