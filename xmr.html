@@ -603,7 +603,7 @@
         }
 
         // Create chart with annotations
-        function createChart(canvasId, chartInstance, weeklyData, stats, signals) {
+        function createChart(canvasId, existingChart, weeklyData, stats, signals) {
             const ctx = document.getElementById(canvasId).getContext('2d');
             
             const labels = weeklyData.map(d => d.label);
@@ -735,11 +735,11 @@
                 };
             });
             
-            if (chartInstance) {
-                chartInstance.destroy();
+            if (existingChart) {
+                existingChart.destroy();
             }
             
-            chartInstance = new Chart(ctx, {
+            const newChart = new Chart(ctx, {
                 type: 'line',
                 data: {
                     labels: labels,
@@ -883,7 +883,7 @@
                 }
             });
             
-            return chartInstance;
+            return newChart;
         }
 
         // Update statistics table
