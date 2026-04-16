@@ -869,7 +869,8 @@
             for (let sim = 0; sim < numSimulations; sim++) {
                 let itemsCompleted = 0;
                 let sprintCount = 0;
-                let currentDate = new Date(startDate);
+                // Create a new Date instance for each simulation to avoid mutation issues
+                let currentDate = new Date(startDate.getTime());
                 
                 while (itemsCompleted < targetItems) {
                     // Get capacity for current month using Map for O(1) lookup
@@ -921,7 +922,8 @@
             
             for (let sim = 0; sim < numSimulations; sim++) {
                 let itemsCompleted = 0;
-                let currentDate = new Date(startDate);
+                // Create a new Date instance for each simulation to avoid mutation issues
+                let currentDate = new Date(startDate.getTime());
                 
                 while (currentDate <= targetDate && itemsCompleted < totalItems) {
                     // Get capacity for current month using Map for O(1) lookup
